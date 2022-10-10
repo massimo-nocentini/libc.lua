@@ -38,25 +38,26 @@ static int compare(const void *v, const void *w) {
 
 static int l_qsort(lua_State *L) {
 	
-	/* Initial checks */
-	assert(lua_istable(L, -2));
-	assert(lua_isfunction(L, -1));
+    /* Initial checks */
+    assert(lua_istable(L, -2));
+    assert(lua_isfunction(L, -1));
 
     int table_absidx = lua_absindex(L, -2);
 
-    lua_len(L, table_absidx);  // push on the stack the number of elements to sort.
-    int nel = lua_tointeger(L, -1); // get that number.
-    lua_pop(L, 1);                  // clean the stack.
+    lua_len(L, table_absidx);		// push on the stack the number of elements to sort.
+    int nel = lua_tointeger(L, -1); 	// get that number.
+    lua_pop(L, 1);                  	// clean the stack.
 
     item_t *permutation = (item_t *) malloc(sizeof(item_t) * nel);
 
     for (int i = 0; i < nel; i++) {
-        item_t *item = (item_t *) malloc(sizeof(item_t));
+	
+	    item_t item; 
+	
+	    item.L = L;
+	    item.idx = i + 1;
         
-        item->L = L;
-        item->idx = i + 1;
-        
-        permutation[i] = *item;
+        permutation[i] = item;
     }
 
     time_t starttime = time(NULL);
@@ -72,10 +73,8 @@ static int l_qsort(lua_State *L) {
         lua_geti(L, table_absidx, idx);
         lua_seti(L, -3, i + 1);
 
-	    lua_pushinteger(L, idx);	// to also provide the sorting permutation.
+        lua_pushinteger(L, idx);	// to also provide the sorting permutation.
         lua_seti(L, -2, i + 1);
-
-        //free(&permutation[i]);
     }
 
     lua_pushinteger(L, endtime - starttime);
@@ -85,8 +84,29 @@ static int l_qsort(lua_State *L) {
     return 3;
 }
 
+static int l_l64a(lua_State *L) {
+    long n = lua_tointeger(L, -1);
+    
+    const char *str = l64a(n);
+    lua_pushstring(L, str);
+
+    return 1;
+}
+
+static int l_a64l(lua_State *L) {
+    
+    const char *str = lua_tostring(L, -1);
+    
+    long n = a64l(str);
+    lua_pushinteger(L, n);
+
+    return 1;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
+    {"l64a", l_l64a},
+    {"a64l", l_a64l},
 	{NULL, NULL} /* sentinel */
 };
  
