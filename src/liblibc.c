@@ -84,6 +84,67 @@ static int l_qsort(lua_State *L) {
     return 3;
 }
 
+static int compare_bsearch(const void *k, const void *v) {
+
+    item_t *key = (item_t *) k;
+    item_t *each = (item_t *) v;
+
+    lua_State *L = key->L;
+
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, key->idx);
+    lua_geti(L, -5, each->idx);
+    lua_call(L, 2, 1);
+    int comparison = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+
+    return comparison;
+}
+
+/* Do a binary search for KEY in BASE, which consists of NMEMB elements
+   of SIZE bytes each, using COMPAR to perform the comparisons.  */
+/*extern void *bsearch (const void *__key, const void *__base,
+		      size_t __nmemb, size_t __size, __compar_fn_t __compar) */
+
+static int l_bsearch(lua_State *L) {
+	
+    /* Initial checks */
+    assert(lua_istable(L, -3));
+    assert(lua_isfunction(L, -1));
+
+    int table_absidx = lua_absindex(L, -3);
+
+    lua_len(L, table_absidx);		// push on the stack the number of elements to sort.
+    int nel = lua_tointeger(L, -1); 	// get that number.
+    lua_pop(L, 1);                  	// clean the stack.
+
+    item_t *permutation = (item_t *) malloc(sizeof(item_t) * nel);
+
+    for (int i = 0; i < nel; i++) {
+	
+	    item_t item; 
+	
+	    item.L = L;
+	    item.idx = i + 1;
+        
+        permutation[i] = item;
+    }
+
+    item_t key;
+    key.L = L;
+    key.idx = table_absidx + 1;
+
+    item_t *found = (item_t *) bsearch (&key, permutation, nel, sizeof(item_t), compare_bsearch);
+
+    if (found != NULL) {
+        lua_geti(L, table_absidx, found->idx);
+    } else {
+        lua_pushnil(L);
+    }
+    
+    return 1;
+}
+
 static int l_l64a(lua_State *L) {
     long n = lua_tointeger(L, -1);
     
@@ -103,10 +164,39 @@ static int l_a64l(lua_State *L) {
     return 1;
 }
 
+static int l_lldiv(lua_State *L) {
+
+    lua_Integer n = lua_tointeger(L, -2);
+    lua_Integer m = lua_tointeger(L, -1);
+
+    lldiv_t d = lldiv(n, m);
+
+    lua_pushinteger(L, d.quot);
+    lua_pushinteger(L, d.rem);
+
+    return 2;
+
+}
+
+static int l_strcmp(lua_State *L) {
+
+    const char *s = lua_tostring(L, -2);
+    const char *r = lua_tostring(L, -1);
+
+    int comp = strcmp(s, r);
+
+    lua_pushinteger(L, comp);
+
+    return 1;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
+    {"bsearch", l_bsearch},
+    {"strcmp", l_strcmp},
     {"l64a", l_l64a},
     {"a64l", l_a64l},
+    {"lldiv", l_lldiv},
 	{NULL, NULL} /* sentinel */
 };
  
