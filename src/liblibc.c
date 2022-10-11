@@ -136,6 +136,8 @@ static int l_bsearch(lua_State *L) {
 
     item_t *found = (item_t *) bsearch (&key, permutation, nel, sizeof(item_t), compare_bsearch);
 
+    free(permutation);
+
     if (found != NULL) {
         lua_geti(L, table_absidx, found->idx);
     } else {
@@ -146,7 +148,7 @@ static int l_bsearch(lua_State *L) {
 }
 
 static int l_l64a(lua_State *L) {
-    long n = lua_tointeger(L, -1);
+    lua_Integer n = lua_tointeger(L, -1);
     
     const char *str = l64a(n);
     lua_pushstring(L, str);
