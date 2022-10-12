@@ -1,9 +1,12 @@
-Started on Tue Oct 11 17:15:44 2022
-    test_a64l ... Ok
-    test_bsearch_int ... Ok
-    test_bsearch_str ... Ok
-    test_l64a ... Ok
-    test_lldiv ... Ok
+Started on Wed Oct 12 09:04:11 2022
+    Test_base64.test_a64l ... Ok
+    Test_base64.test_a64l_l64a_identity ... Ok
+    Test_base64.test_l64a ... Ok
+    Test_bsearch.test_lteqgtcmp ... Ok
+    Test_bsearch.test_strcmp ... Ok
+    Test_lldiv.test_4897294869528760942_759843276952576 ... Ok
+    Test_lldiv.test_minus5_3 ... Ok
+    Test_qsort.test_1e6 ... Ok
 =========================================================
-Ran 5 tests in 0.000 seconds, 5 successes, 0 failures
+Ran 8 tests in 3.639 seconds, 8 successes, 0 failures
 OK
