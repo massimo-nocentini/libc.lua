@@ -10,6 +10,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <time.h>
+#include <math.h>
 
 
 struct item_s {
@@ -192,6 +193,47 @@ static int l_strcmp(lua_State *L) {
     return 1;
 }
 
+static int l_fma(lua_State *L) {
+
+    lua_Number x = lua_tonumber(L, -3);
+    lua_Number y = lua_tonumber(L, -2);
+    lua_Number z = lua_tonumber(L, -1);
+
+    lua_Number r = fma(x, y, z);
+
+    lua_pushnumber(L, r);
+
+    return 1;
+}
+
+
+static int l_fmaf(lua_State *L) {
+
+    lua_Number x = lua_tonumber(L, -3);
+    lua_Number y = lua_tonumber(L, -2);
+    lua_Number z = lua_tonumber(L, -1);
+
+    lua_Number r = fmaf(x, y, z);
+
+    lua_pushnumber(L, r);
+
+    return 1;
+}
+
+
+static int l_fmal(lua_State *L) {
+
+    lua_Number x = lua_tonumber(L, -3);
+    lua_Number y = lua_tonumber(L, -2);
+    lua_Number z = lua_tonumber(L, -1);
+
+    lua_Number r = fmal(x, y, z);
+
+    lua_pushnumber(L, r);
+
+    return 1;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
     {"bsearch", l_bsearch},
@@ -199,6 +241,9 @@ static const struct luaL_Reg libc [] = {
     {"l64a", l_l64a},
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},
+    {"fma", l_fma},
+    {"fmaf", l_fmaf},
+    {"fmal", l_fmal},
 	{NULL, NULL} /* sentinel */
 };
  

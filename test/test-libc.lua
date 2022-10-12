@@ -79,5 +79,24 @@ function Test_qsort:test_1e6 ()
 end
 
 --------------------------------------------------------------------------------
+Test_fma = {}
+
+function Test_fma:test_10_20_30 ()
+	
+	local x, y, z = 10.0, 20.0, 30.0
+	lu.assertEquals(libc.fma(x, y, z), x * y + z)
+end
+
+
+function Test_fma:test_a_b_minus ()
+	
+	local x, y = 1.0, 0.000001
+    local high = x * y
+    local low = libc.fma(x, y, -high)
+	lu.assertEquals(high + low, x * y)
+    lu.assertEquals(libc.fma (x, y, 0.0), x * y)
+end
+
+--------------------------------------------------------------------------------
 
 os.exit( lu.LuaUnit.run() )
