@@ -3,28 +3,30 @@ local liblibc = require 'liblibc'
 
 local libc = {}
 
-setmetatable(libc, { __index = liblibc })
+libc.stdlib = {
+	l64a = liblibc.l64a,
+	a64l = liblibc.a64l,
+	lldiv = liblibc.lldiv,
+}
 
-function libc.lteqgtcmp (a, b)  
+libc.string = {
+	strcmp = liblibc.strcmp,
+}
+
+function libc.stdlib.lteqgtcmp (a, b)  
 	if a < b then return -1
 	elseif a == b then return 0
 	else return 1 end
 end
 
-function libc.qsort (tbl, compare)
+function libc.stdlib.qsort (tbl, compare)
+	return liblibc.qsort(tbl, compare or libc.stdlib.lteqgtcmp) end
 
-	compare = compare or libc.lteqgtcmp
-	return liblibc.qsort(tbl, compare)
-end
-
-function libc.bsearch (tbl, key, compare)
-
-	compare = compare or libc.lteqgtcmp
-	return liblibc.bsearch(tbl, key, compare)
-end
+function libc.stdlib.bsearch (tbl, key, compare)
+	return liblibc.bsearch(tbl, key, compare or libc.stdlib.lteqgtcmp) end
 
 libc.math = {
-	fma = libc.fma,
+	fma = liblibc.fma,
 }
 
 liblibc.constants (libc.math)	-- augment the `math` table with some constants

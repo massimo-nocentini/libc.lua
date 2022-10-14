@@ -206,51 +206,23 @@ static int l_fma(lua_State *L) {
     return 1;
 }
 
-
-static int l_fmaf(lua_State *L) {
-
-    lua_Number x = lua_tonumber(L, -3);
-    lua_Number y = lua_tonumber(L, -2);
-    lua_Number z = lua_tonumber(L, -1);
-
-    lua_Number r = fmaf(x, y, z);
-
-    lua_pushnumber(L, r);
-
-    return 1;
-}
-
-
-static int l_fmal(lua_State *L) {
-
-    lua_Number x = lua_tonumber(L, -3);
-    lua_Number y = lua_tonumber(L, -2);
-    lua_Number z = lua_tonumber(L, -1);
-
-    lua_Number r = fmal(x, y, z);
-
-    lua_pushnumber(L, r);
-
-    return 1;
-}
-
 static int l_constants(lua_State *L) {
     
     assert (lua_istable(L, -1) == 1);
 
-    lua_pushnumber(L, M_E);	            /* e */
+    lua_pushnumber(L, M_E);	                /* e */
     lua_setfield(L, -2, "M_E");
 
-    lua_pushnumber(L, M_LOG2E);	        /* log_2 e */
+    lua_pushnumber(L, M_LOG2E);	            /* log_2 e */
     lua_setfield(L, -2, "M_LOG2E");
 
-    lua_pushnumber(L, M_LOG10E);	    /* log_10 e */
+    lua_pushnumber(L, M_LOG10E);	        /* log_10 e */
     lua_setfield(L, -2, "M_LOG10E");
 
-    lua_pushnumber(L, M_LN2);	        /* log_e 2 */
+    lua_pushnumber(L, M_LN2);	            /* log_e 2 */
     lua_setfield(L, -2, "M_LN2");
 
-    lua_pushnumber(L, M_LN10);	        /* log_e 10 */
+    lua_pushnumber(L, M_LN10);	            /* log_e 10 */
     lua_setfield(L, -2, "M_LN10");
 
     lua_pushnumber(L, M_PI);	            /* pi */
@@ -302,8 +274,6 @@ static const struct luaL_Reg libc [] = {
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},
     {"fma", l_fma},
-    {"fmaf", l_fmaf},
-    {"fmal", l_fmal},
     {"constants", l_constants},
 	{NULL, NULL} /* sentinel */
 };
