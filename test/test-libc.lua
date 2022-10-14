@@ -99,4 +99,17 @@ end
 
 --------------------------------------------------------------------------------
 
+Test_constants = {}
+
+function Test_constants:test_gr ()
+	
+	lu.assertEquals(libc.math.M_GR, 1.618033988749894848204586834365638117720309179805762)
+end
+
+function Test_constants:test_pi ()
+	
+    lu.assertEquals(libc.math.M_PI, 3.14159265358979323846)
+end
+--------------------------------------------------------------------------------
+
 os.exit( lu.LuaUnit.run() )

@@ -23,4 +23,10 @@ function libc.bsearch (tbl, key, compare)
 	return liblibc.bsearch(tbl, key, compare)
 end
 
+libc.math = {
+	fma = libc.fma,
+}
+
+liblibc.constants (libc.math)	-- augment the `math` table with some constants
+
 return libc

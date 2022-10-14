@@ -234,6 +234,66 @@ static int l_fmal(lua_State *L) {
     return 1;
 }
 
+static int l_constants(lua_State *L) {
+    
+    assert (lua_istable(L, -1) == 1);
+
+    lua_pushnumber(L, M_E);	            /* e */
+    lua_setfield(L, -2, "M_E");
+
+    lua_pushnumber(L, M_LOG2E);	        /* log_2 e */
+    lua_setfield(L, -2, "M_LOG2E");
+
+    lua_pushnumber(L, M_LOG10E);	    /* log_10 e */
+    lua_setfield(L, -2, "M_LOG10E");
+
+    lua_pushnumber(L, M_LN2);	        /* log_e 2 */
+    lua_setfield(L, -2, "M_LN2");
+
+    lua_pushnumber(L, M_LN10);	        /* log_e 10 */
+    lua_setfield(L, -2, "M_LN10");
+
+    lua_pushnumber(L, M_PI);	            /* pi */
+    lua_setfield(L, -2, "M_PI");
+
+    lua_pushnumber(L, M_PI_2);	            /* pi/2 */
+    lua_setfield(L, -2, "M_PI_2");
+
+    lua_pushnumber(L, M_PI_4);	            /* pi/4 */
+    lua_setfield(L, -2, "M_PI_4");
+
+    lua_pushnumber(L, M_1_PI);	            /* 1/pi */
+    lua_setfield(L, -2, "M_1_PI");
+
+    lua_pushnumber(L, M_2_PI);	            /* 2/pi */
+    lua_setfield(L, -2, "M_2_PI");
+
+    lua_pushnumber(L, M_2_SQRTPI);	        /* 2/sqrt(pi) */
+    lua_setfield(L, -2, "M_2_SQRTPI");
+
+    lua_pushnumber(L, M_SQRT2);	            /* sqrt(2) */
+    lua_setfield(L, -2, "M_SQRT2");
+
+    lua_pushnumber(L, M_SQRT1_2);	        /* 1/sqrt(2) */
+    lua_setfield(L, -2, "M_SQRT1_2");
+
+    lua_Number M_GR = 1.61803398874989484820458683436563811772030917980576286213544862270526046281890244970720720418939113748475;
+    lua_pushnumber(L, M_GR);                /* Golden ratio */
+    lua_setfield(L, -2, "M_GR");
+
+    lua_Number M_SR = 0.61803398874989484820458683436563811772030917980576286213544862270526046281890244970720720418939113748475;
+    lua_pushnumber(L, M_SR);                /* Silver ratio */ 
+    lua_setfield(L, -2, "M_SR");
+
+    lua_pushnumber(L, M_GR + M_SR);         /* Platinum ratio */ 
+    lua_setfield(L, -2, "M_PR");
+
+    lua_pushnumber(L, ((double)1) - M_SR);  /* Bronze ratio */ 
+    lua_setfield(L, -2, "M_BR");
+
+    return 0;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
     {"bsearch", l_bsearch},
@@ -244,6 +304,7 @@ static const struct luaL_Reg libc [] = {
     {"fma", l_fma},
     {"fmaf", l_fmaf},
     {"fmal", l_fmal},
+    {"constants", l_constants},
 	{NULL, NULL} /* sentinel */
 };
  
