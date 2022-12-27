@@ -13,6 +13,10 @@ libc.string = {
 	strcmp = liblibc.strcmp,
 }
 
+libc.pthread = {
+	create = liblibc.pthread_create,
+}
+
 function libc.stdlib.lteqgtcmp (a, b)  
 	if a < b then return -1
 	elseif a == b then return 0

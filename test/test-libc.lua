@@ -110,6 +110,17 @@ function Test_constants:test_pi ()
 	
     lu.assertEquals(libc.math.M_PI, 3.14159265358979323846)
 end
+
+--------------------------------------------------------------------------------
+Test_pthread = {}
+
+function Test_pthread:test_pthread_create ()
+	
+    local a = 1
+	local res, pthread, ud, cothread = libc.pthread.create (function () a = a + 1; print (a) end)
+    os.execute 'sleep 2'
+end
+
 --------------------------------------------------------------------------------
 
 os.exit( lu.LuaUnit.run() )
