@@ -15,6 +15,7 @@ libc.string = {
 
 libc.pthread = {
 	create = liblibc.pthread_create,
+	join = liblibc.pthread_join,
 }
 
 function libc.stdlib.lteqgtcmp (a, b)  

@@ -116,9 +116,17 @@ Test_pthread = {}
 
 function Test_pthread:test_pthread_create ()
 	
-    local a = 1
-	local res, pthread, ud, cothread = libc.pthread.create (function () a = a + 1; print (a) end)
-    os.execute 'sleep 2'
+    local a, j = 0, 100
+
+	local res, pthread, ud, cothread = libc.pthread.create (
+        function () for i = 1, j do a = a + 1 end end
+    )
+
+    local jflag, uud = libc.pthread.join (pthread)
+    
+    lu.assertTrue (res == 0 and jflag == 0)
+    lu.assertEquals (a, j)
+    lu.assertEquals (ud, uud)
 end
 
 --------------------------------------------------------------------------------

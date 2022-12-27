@@ -276,12 +276,13 @@ static void * pthread_create_callback (void *arg) {
 
     item_t* ud = (item_t*) arg;
 
-    lua_State* L = (lua_State*) lua_touserdata (ud->L, 1);
+    //lua_State* L = (lua_State*) lua_touserdata (ud->L, 1);
     lua_pushvalue (ud->L, ud->idx);
-    lua_xmove (ud->L, L, 1);
-    lua_call (L, 1, -1);
+    //lua_xmove (ud->L, L, 1);
+    lua_call (ud->L, 0, LUA_MULTRET);
 
-    return NULL;
+    pthread_exit (arg);
+    //return NULL;
 }
 
 static int l_pthread_create(lua_State *L) {
@@ -292,15 +293,16 @@ static int l_pthread_create(lua_State *L) {
 
     lua_State* S = lua_newthread (L);  // the new thread is left on the stack.
     int newthread_pos = lua_absindex (L, -1);
-    lua_pushvalue (L, -2);  // which is a function because of the initial assert.
-    lua_pushlightuserdata (L, L);
-    lua_xmove (L, S, 2);    // cross move both the original state L and the function to be called.
+    
+    //lua_pushlightuserdata (S, L);
+    lua_pushvalue (L, newthread_pos - 1);  // which is a function because of the initial assert.
+    lua_xmove (L, S, 1);    // cross move both the original state L and the function to be called.
 
     ud->L = S;
     ud->idx = lua_absindex (S, -1);
-    assert (ud->idx == 2);
+    assert (ud->idx == 1);
 
-    pthread_t* t;
+    pthread_t* t = (pthread_t*) malloc (sizeof(pthread_t));
     int res = pthread_create (t, NULL, pthread_create_callback, ud);
 
     lua_pushinteger (L, res);
@@ -313,6 +315,20 @@ static int l_pthread_create(lua_State *L) {
 
 }
 
+static int l_pthread_join(lua_State *L) {
+
+    pthread_t* t = (pthread_t*) lua_touserdata (L, -1);
+
+    void *res;
+    int flag = pthread_join (*t, &res);
+
+    lua_pushinteger (L, flag);
+
+    if (res != NULL) lua_pushlightuserdata (L, res);
+    else lua_pushnil (L);
+
+    return 2;
+}
 
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
@@ -324,6 +340,7 @@ static const struct luaL_Reg libc [] = {
     {"fma", l_fma},
     {"constants", l_constants},
     {"pthread_create", l_pthread_create},
+    {"pthread_join", l_pthread_join},
 	{NULL, NULL} /* sentinel */
 };
  
