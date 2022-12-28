@@ -326,7 +326,6 @@ static int l_pthread_create(lua_State *L) {
     lua_remove (L, newthread_pos);
 
     return 2;
-
 }
 
 static int l_pthread_join(lua_State* L) {

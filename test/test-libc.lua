@@ -128,6 +128,21 @@ function Test_pthread:test_pthread_create ()
     lu.assertNil (v)
 end
 
+function Test_pthread:test_pthread_sleep ()
+
+    local a = 0
+
+    local pthread = libc.pthread.checked_create 'pthread_create failed.' (
+        lambda.o { function () return a end, os.execute }, 'sleep 2'
+    )
+
+    --local pthread_print = libc.pthread.checked_create 'pthread_create failed.' (lambda.forever, function () a = a + 1 end)
+
+    local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
+
+    lu.assertEquals (a, 0)
+end
+
 function Test_pthread:test_pthread_create_named_function ()
 
     local a, j, s = 0, 100, 'hello from main'
@@ -177,8 +192,8 @@ function Test_pthread:test_pthread_coro ()
 
     local coroA =  coroutine.create (function (i) 
         while true do 
-            print ('A ready ' .. i); 
-            i = coroutine.yield (one);
+            print ('A ready ' .. i)
+            i = coroutine.yield (one)
             --os.execute ('sleep ' .. random.random(i))
         end 
     end)
