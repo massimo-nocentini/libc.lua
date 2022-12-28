@@ -411,6 +411,28 @@ static int l_pthread_equal(lua_State* L) {
     return 1;
 }
 
+static int l_pthread_detach(lua_State* L) {
+
+    lua_getfield (L, -1, "pthread");
+    pthread_t* s = (pthread_t*) lua_touserdata (L, -1);
+    lua_pop (L, 1);
+
+    int retcode = pthread_detach (*s);
+
+    lua_pushinteger (L, retcode);
+
+    return 1;
+}
+
+static int l_pthread_selfdetach(lua_State* L) {
+
+    int retcode = pthread_detach (pthread_self());
+
+    lua_pushinteger (L, retcode);
+
+    return 1;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
     {"bsearch", l_bsearch},
@@ -424,6 +446,8 @@ static const struct luaL_Reg libc [] = {
     {"pthread_join", l_pthread_join},
     {"pthread_self", l_pthread_self},
     {"pthread_equal", l_pthread_equal},
+    {"pthread_detach", l_pthread_detach},
+    {"pthread_selfdetach", l_pthread_selfdetach},
 	{NULL, NULL} /* sentinel */
 };
  

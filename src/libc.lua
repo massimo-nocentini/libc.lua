@@ -19,6 +19,8 @@ libc.pthread = {
 	join = liblibc.pthread_join,
 	self = liblibc.pthread_self,
 	equal = liblibc.pthread_equal,
+	detach = liblibc.pthread_detach,
+	selfdetach = liblibc.pthread_selfdetach,
 }
 
 function libc.pthread.assert (msg)

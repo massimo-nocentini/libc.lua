@@ -4,7 +4,7 @@ linux:
 		liblibc.so liblibc.c -L/usr/local/lib/ -llua 
 
 macos:
-	cc -O2 -std=c11 -fPIC -Wall -dynamiclib -o liblibc.dylib liblibc.c -llua -pthread
+	cc -O2 -std=c11 -fPIC -Wall -dynamiclib -o liblibc.dylib liblibc.c -llua
 
 install:
 	mkdir -p /usr/local/lib/lua/5.4/	# just for ensuring that the dest dir exists
