@@ -129,7 +129,7 @@ function Test_pthread:test_pthread_create ()
 end
 
 function Test_pthread:test_pthread_create_named_function ()
-	
+
     local a, j, s = 0, 100, 'hello from main'
 
     local function A (k, b)
@@ -145,6 +145,30 @@ function Test_pthread:test_pthread_create_named_function ()
     lu.assertEquals (a, ra)
     lu.assertEquals (s, rs)
     lu.assertNil (useless)
+end
+
+
+function Test_pthread:test_pthread_self ()
+
+	local pthread = libc.pthread.self ()
+
+    lu.assertEquals (type (pthread.pthread), 'userdata')
+end
+
+function Test_pthread:test_pthread_equal_self ()
+	
+    lu.assertTrue (libc.pthread.equal (libc.pthread.self (), libc.pthread.self ()))
+end
+
+function Test_pthread:test_pthread_equal ()
+	
+    local function A (main_thread)
+        return libc.pthread.equal (libc.pthread.self (), main_thread)
+    end
+
+	local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, libc.pthread.self ())
+    lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
+    
 end
 
 --------------------------------------------------------------------------------
