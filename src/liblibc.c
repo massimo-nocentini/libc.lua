@@ -276,13 +276,11 @@ static void * pthread_create_callback (void *arg) {
 
     item_t* ud = (item_t*) arg;
 
-    //lua_State* L = (lua_State*) lua_touserdata (ud->L, 1);
     lua_pushvalue (ud->L, ud->idx);
-    //lua_xmove (ud->L, L, 1);
+    
     lua_call (ud->L, 0, LUA_MULTRET);
 
-    pthread_exit (arg);
-    //return NULL;
+    return arg;
 }
 
 static int l_pthread_create(lua_State *L) {

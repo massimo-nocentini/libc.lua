@@ -18,6 +18,14 @@ libc.pthread = {
 	join = liblibc.pthread_join,
 }
 
+function libc.pthread.assert (msg)
+	return function (retcode, ...)
+		if retcode == 0 then return ...
+		elseif retcode > 0 then error (msg)
+		else error 'Not expected to reach this branch using pthreads.' end
+	end
+end
+
 function libc.stdlib.lteqgtcmp (a, b)  
 	if a < b then return -1
 	elseif a == b then return 0

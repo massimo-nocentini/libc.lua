@@ -1,6 +1,7 @@
 
 local lu = require 'luaunit'
 local libc = require 'libc'
+local lambda = require 'operator'
 
 Test_base64 = {}
 
@@ -118,13 +119,16 @@ function Test_pthread:test_pthread_create ()
 	
     local a, j = 0, 100
 
-	local res, pthread, ud, cothread = libc.pthread.create (
-        function () for i = 1, j do a = a + 1 end end
-    )
+	local pthread, ud, cothread = lambda.o { 
+        libc.pthread.assert 'pthread_create failed.',
+        libc.pthread.create,
+    } (function () for i = 1, j do a = a + 1 end end)
 
-    local jflag, uud = libc.pthread.join (pthread)
-    
-    lu.assertTrue (res == 0 and jflag == 0)
+    local uud = lambda.o {
+        libc.pthread.assert 'pthread_join failed.',
+        libc.pthread.join,
+    } (pthread)
+
     lu.assertEquals (a, j)
     lu.assertEquals (ud, uud)
 end
