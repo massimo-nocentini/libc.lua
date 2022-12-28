@@ -175,18 +175,31 @@ function Test_pthread:test_pthread_coro ()
 
     local one, two = 1, 2
 
-    local coroA =  coroutine.create (function () while true do print ('A ready'); coroutine.yield (one) end end)
-    local coroB =  coroutine.create (function () while true do print ('B ready'); coroutine.yield (two) end end)
+    local coroA =  coroutine.create (function (i) 
+        while true do 
+            print ('A ready ' .. i); 
+            i = coroutine.yield (one);
+            --os.execute ('sleep ' .. random.random(i))
+        end 
+    end)
+    
+    local coroB =  coroutine.create (function (i) 
+        while true do 
+            print ('B ready ' .. i); 
+            i = coroutine.yield (two);
+            --os.execute ('sleep ' .. random.random(10))
+        end 
+    end)
     
     local f = function (coro, j)
         for i = 1, j do
-            local flag, v = coroutine.resume (coro)
+            local flag, v = coroutine.resume (coro, i)
             if flag and v ~= nil then print ('C', v) end
         end
     end
 
-	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' (f, coroA, 100)
-    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' (f, coroB, 100)
+	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' (f, coroA, 10)
+    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' (f, coroB, 10)
     
     libc.pthread.checked_join 'pthread_join failed.' (pthread_one)
     libc.pthread.checked_join 'pthread_join failed.' (pthread_two)
