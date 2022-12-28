@@ -297,12 +297,12 @@ static int l_pthread_create(lua_State *L) {
 
     item_t* ud = (item_t *) malloc (sizeof (item_t));
 
-    lua_State* S = lua_newthread (L);  // the new thread is left on the stack.
-    int newthread_pos = lua_absindex (L, -1);
+    lua_State* S = lua_newthread (L);           // the new thread is left on the stack,
+    int newthread_pos = lua_absindex (L, -1);   // and get its absolute index.
     
-    for (int i = 1; i <= nargs; i++) lua_pushvalue (L, i);
+    for (int i = 1; i <= nargs; i++) lua_pushvalue (L, i);  // duplicate all the arguments.
 
-    lua_xmove (L, S, nargs);
+    lua_xmove (L, S, nargs);    // then move them in chunk.
 
     ud->L = S;
     ud->idx = nargs - 1;
@@ -311,21 +311,44 @@ static int l_pthread_create(lua_State *L) {
     int res = pthread_create (t, NULL, pthread_create_callback, ud);
 
     lua_pushinteger (L, res);
+
+    lua_newtable (L);
+
     lua_pushlightuserdata (L, t);
+    lua_setfield (L, -2, "pthread");
+
     lua_pushlightuserdata (L, ud);
+    lua_setfield (L, -2, "userdata");
+
     lua_pushvalue (L, newthread_pos);
+    lua_setfield (L, -2, "cothread");
+
     lua_remove (L, newthread_pos);
 
-    return 4;
+    return 2;
 
 }
 
-static int l_pthread_join(lua_State *L) {
+static int l_pthread_join(lua_State* L) {
 
-    pthread_t* t = (pthread_t*) lua_touserdata (L, -1);
+    assert (lua_istable (L, -1));
+    int table_idx = lua_absindex (L, -1);
+
+    lua_getfield (L, table_idx, "pthread");
+    pthread_t* pthread = (pthread_t*) lua_touserdata (L, -1);
+    lua_pop (L, 1);
+
+    lua_getfield (L, table_idx, "userdata");
+    void* userdata = lua_touserdata (L, -1);
+    lua_pop (L, 1);
+
+    lua_getfield (L, table_idx, "cothread");
+    lua_State* cothread = lua_tothread (L, -1);
+    assert (cothread != NULL);
+    lua_pop (L, 1);
 
     void *res;
-    int flag = pthread_join (*t, &res);
+    int flag = pthread_join (*pthread, &res);
 
     int nret = 0;
 
@@ -333,16 +356,30 @@ static int l_pthread_join(lua_State *L) {
     nret++;
 
     if (res != NULL) {
+        assert (res == userdata);
+
         item_t* ud = (item_t*) res;
         lua_State* auxstate = ud->L;
 
         int returned = lua_gettop (auxstate) - (ud->idx + 1);
-        
+
         lua_xmove (auxstate, L, returned);
 
         nret += returned;
     }
+
+    lua_pushnil (L);
+    lua_setfield (L, table_idx, "cothread");
+
+    lua_pushnil (L);
+    lua_setfield (L, table_idx, "userdata");
     
+    lua_pushnil (L);
+    lua_setfield (L, table_idx, "pthread");
+    
+    free (userdata);
+    free (pthread);
+
     return nret;
 }
 

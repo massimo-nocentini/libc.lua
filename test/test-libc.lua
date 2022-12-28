@@ -119,7 +119,7 @@ function Test_pthread:test_pthread_create ()
 	
     local a, j = 0, 100
 
-	local pthread, ud, cothread = libc.pthread.checked_create
+	local pthread = libc.pthread.checked_create
         'pthread_create failed.' (function () for i = 1, j do a = a + 1 end end)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
@@ -137,7 +137,7 @@ function Test_pthread:test_pthread_create_named_function ()
         return a, b
     end
 
-	local pthread, ud, cothread = libc.pthread.checked_create 'pthread_create failed.' (A, j, s)
+	local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, j, s)
 
     local ra, rs, useless = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
