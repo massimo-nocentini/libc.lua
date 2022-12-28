@@ -134,7 +134,7 @@ function Test_pthread:test_pthread_create_named_function ()
 
     local function A (k, b)
         for i = 1, k do a = a + 1 end
-        return a, b
+        return a, #b
     end
 
 	local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, j, s)
@@ -143,7 +143,7 @@ function Test_pthread:test_pthread_create_named_function ()
 
     lu.assertEquals (a, j)
     lu.assertEquals (a, ra)
-    lu.assertEquals (s, rs)
+    lu.assertEquals (#s, rs)
     lu.assertNil (useless)
 end
 
