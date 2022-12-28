@@ -1,5 +1,6 @@
 
 local liblibc = require 'liblibc'
+local lambda = require 'operator'
 
 local libc = {}
 
@@ -24,6 +25,20 @@ function libc.pthread.assert (msg)
 		elseif retcode > 0 then error (msg)
 		else error 'Not expected to reach this branch using pthreads.' end
 	end
+end
+
+function libc.pthread.checked_create (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.create,
+	}
+end
+
+function libc.pthread.checked_join (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.join,
+	}
 end
 
 function libc.stdlib.lteqgtcmp (a, b)  

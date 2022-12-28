@@ -119,15 +119,28 @@ function Test_pthread:test_pthread_create ()
 	
     local a, j = 0, 100
 
-	local pthread, ud, cothread = lambda.o { 
-        libc.pthread.assert 'pthread_create failed.',
-        libc.pthread.create,
-    } (function () for i = 1, j do a = a + 1 end end)
+	local pthread, ud, cothread = libc.pthread.checked_create
+        'pthread_create failed.' (function () for i = 1, j do a = a + 1 end end)
 
-    local uud = lambda.o {
-        libc.pthread.assert 'pthread_join failed.',
-        libc.pthread.join,
-    } (pthread)
+    local uud = libc.pthread.checked_join 'pthread_join failed.' (pthread)
+
+    lu.assertEquals (a, j)
+    lu.assertEquals (ud, uud)
+end
+
+function Test_pthread:test_pthread_create_named_function ()
+	
+    local a, j = 0, 100
+
+    local function A (k, b)
+        print (b)
+        for i = 1, k do a = a + 1 end
+    end
+
+	local pthread, ud, cothread = libc.pthread.checked_create
+        'pthread_create failed.' (A, 100, 'hello from main')
+
+    local uud = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
     lu.assertEquals (a, j)
     lu.assertEquals (ud, uud)

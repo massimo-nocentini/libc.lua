@@ -276,30 +276,37 @@ static void * pthread_create_callback (void *arg) {
 
     item_t* ud = (item_t*) arg;
 
-    lua_pushvalue (ud->L, ud->idx);
-    
-    lua_call (ud->L, 0, LUA_MULTRET);
+    lua_State* auxstate = ud->L;
+    int nargs = ud->idx;
 
-    return arg;
+    assert (lua_isfunction (auxstate, 1));
+    lua_pushvalue (auxstate, 1);
+    
+    for (int i = 0; i < nargs; i++) lua_pushvalue (auxstate, 2 + i);
+    
+    lua_call (auxstate, nargs, LUA_MULTRET);
+
+    pthread_exit (arg);
+
+    return arg;     // to respect the return type.
 }
 
 static int l_pthread_create(lua_State *L) {
 
-    assert (lua_isfunction (L, -1));
+    int nargs = lua_gettop (L);     // including the function to be called in the C callback.
 
     item_t* ud = (item_t *) malloc (sizeof (item_t));
 
     lua_State* S = lua_newthread (L);  // the new thread is left on the stack.
     int newthread_pos = lua_absindex (L, -1);
     
-    //lua_pushlightuserdata (S, L);
-    lua_pushvalue (L, newthread_pos - 1);  // which is a function because of the initial assert.
-    lua_xmove (L, S, 1);    // cross move both the original state L and the function to be called.
+    for (int i = 1; i <= nargs; i++) lua_pushvalue (L, i);
+
+    lua_xmove (L, S, nargs);
 
     ud->L = S;
-    ud->idx = lua_absindex (S, -1);
-    assert (ud->idx == 1);
-
+    ud->idx = nargs - 1;
+    
     pthread_t* t = (pthread_t*) malloc (sizeof(pthread_t));
     int res = pthread_create (t, NULL, pthread_create_callback, ud);
 
