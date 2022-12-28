@@ -122,28 +122,29 @@ function Test_pthread:test_pthread_create ()
 	local pthread, ud, cothread = libc.pthread.checked_create
         'pthread_create failed.' (function () for i = 1, j do a = a + 1 end end)
 
-    local uud = libc.pthread.checked_join 'pthread_join failed.' (pthread)
+    local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
     lu.assertEquals (a, j)
-    lu.assertEquals (ud, uud)
+    lu.assertNil (v)
 end
 
 function Test_pthread:test_pthread_create_named_function ()
 	
-    local a, j = 0, 100
+    local a, j, s = 0, 100, 'hello from main'
 
     local function A (k, b)
-        print (b)
         for i = 1, k do a = a + 1 end
+        return a, b
     end
 
-	local pthread, ud, cothread = libc.pthread.checked_create
-        'pthread_create failed.' (A, 100, 'hello from main')
+	local pthread, ud, cothread = libc.pthread.checked_create 'pthread_create failed.' (A, j, s)
 
-    local uud = libc.pthread.checked_join 'pthread_join failed.' (pthread)
+    local ra, rs, useless = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
     lu.assertEquals (a, j)
-    lu.assertEquals (ud, uud)
+    lu.assertEquals (a, ra)
+    lu.assertEquals (s, rs)
+    lu.assertNil (useless)
 end
 
 --------------------------------------------------------------------------------

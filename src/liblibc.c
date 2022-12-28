@@ -281,7 +281,7 @@ static void * pthread_create_callback (void *arg) {
 
     assert (lua_isfunction (auxstate, 1));
     lua_pushvalue (auxstate, 1);
-    
+
     for (int i = 0; i < nargs; i++) lua_pushvalue (auxstate, 2 + i);
     
     lua_call (auxstate, nargs, LUA_MULTRET);
@@ -327,12 +327,23 @@ static int l_pthread_join(lua_State *L) {
     void *res;
     int flag = pthread_join (*t, &res);
 
+    int nret = 0;
+
     lua_pushinteger (L, flag);
+    nret++;
 
-    if (res != NULL) lua_pushlightuserdata (L, res);
-    else lua_pushnil (L);
+    if (res != NULL) {
+        item_t* ud = (item_t*) res;
+        lua_State* auxstate = ud->L;
 
-    return 2;
+        int returned = lua_gettop (auxstate) - (ud->idx + 1);
+        
+        lua_xmove (auxstate, L, returned);
+
+        nret += returned;
+    }
+    
+    return nret;
 }
 
 static const struct luaL_Reg libc [] = {
