@@ -265,13 +265,6 @@ static int l_constants(lua_State *L) {
     return 0;
 }
 
-/*
-
-int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-void *(*start)(void *), void *arg);
-
-*/
-
 static void * pthread_create_callback (void *arg) {
 
     item_t* ud = (item_t*) arg;
@@ -283,12 +276,12 @@ static void * pthread_create_callback (void *arg) {
     lua_pushvalue (auxstate, 1);
 
     for (int i = 0; i < nargs; i++) lua_pushvalue (auxstate, 2 + i);
-    
+
     lua_call (auxstate, nargs, LUA_MULTRET);
 
-    pthread_exit (arg);
+    //pthread_exit (arg);
 
-    return arg;     // to respect the return type.
+    return arg;
 }
 
 static int l_pthread_create(lua_State *L) {
@@ -384,14 +377,20 @@ static int l_pthread_join(lua_State* L) {
 
 static int l_pthread_self(lua_State* L) {
 
+    int nargs = lua_gettop (L);
+
     pthread_t pthread = pthread_self ();
 
-    lua_newtable (L);
+    assert (lua_isfunction (L, -1));
 
+    lua_pushvalue (L, -1);  // dup the function to be called.
+    lua_newtable (L);
     lua_pushlightuserdata (L, &pthread);
     lua_setfield (L, -2, "pthread");
+    
+    lua_call (L, 1, LUA_MULTRET);
 
-    return 1;
+    return lua_gettop (L) - nargs;
 }
 
 static int l_pthread_equal(lua_State* L) {

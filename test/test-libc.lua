@@ -116,7 +116,7 @@ end
 Test_pthread = {}
 
 function Test_pthread:test_pthread_create ()
-	
+
     local a, j = 0, 100
 
 	local pthread = libc.pthread.checked_create
@@ -131,6 +131,7 @@ end
 function Test_pthread:test_pthread_sleep ()
 
     local a = 0
+    local function inc () a = a + 1 end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' (
         lambda.o { function () return a end, os.execute }, 'sleep 2'
@@ -139,11 +140,12 @@ function Test_pthread:test_pthread_sleep ()
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.' (
         lambda.o {
             function () while true do a = a + 1 end end,
-            libc.pthread.assert 'pthread_selfdetach failed.',
-            libc.pthread.selfdetach,
-        } 
+            libc.pthread.assert 'pthread_self failed.',
+            libc.pthread.self,
+            lambda.K (libc.pthread.detach),
+        }
     )
-    
+
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
     lu.assertTrue (v <= a)
@@ -168,27 +170,34 @@ function Test_pthread:test_pthread_create_named_function ()
     lu.assertNil (useless)
 end
 
-
 function Test_pthread:test_pthread_self ()
 
-	local pthread = libc.pthread.self ()
+    local one, two = 1, 2
 
-    lu.assertEquals (type (pthread.pthread), 'userdata')
-end
+	local a, b, c = libc.pthread.self (
+        function (pthread)
+            lu.assertEquals (type (pthread.pthread), 'userdata')
+            return one, two     -- this is just to check of LUA_MULTRET works.
+        end
+    )
 
-function Test_pthread:test_pthread_equal_self ()
-	
-    lu.assertTrue (libc.pthread.equal (libc.pthread.self (), libc.pthread.self ()))
+    lu.assertEquals(a, one)
+    lu.assertEquals(b, two)
+    lu.assertNil (c)
 end
 
 function Test_pthread:test_pthread_equal ()
 
     local function A (main_thread)
-        return libc.pthread.equal (libc.pthread.self (), main_thread)
+        return libc.pthread.self (
+            function (myself) return libc.pthread.equal (myself, main_thread) end
+        ) 
     end
 
-	local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, libc.pthread.self ())
-    lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
+    libc.pthread.self (function (main_thread)
+        local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, main_thread)
+        lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
+    end)
 
 end
 
@@ -196,7 +205,7 @@ function Test_pthread:test_pthread_coro ()
 
     local one, two = 1, 2
 
-    local coroA =  coroutine.create (function (i) 
+    local coroA =  coroutine.create (function (i)
         while true do 
             print ('A ready ' .. i)
             i = coroutine.yield (one)
@@ -204,7 +213,7 @@ function Test_pthread:test_pthread_coro ()
         end 
     end)
     
-    local coroB =  coroutine.create (function (i) 
+    local coroB =  coroutine.create (function (i)
         while true do 
             print ('B ready ' .. i); 
             i = coroutine.yield (two);
