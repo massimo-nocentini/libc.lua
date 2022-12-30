@@ -15,12 +15,13 @@ libc.string = {
 }
 
 libc.pthread = {
-	create = liblibc.pthread_create {},
+	create = liblibc.pthread_create,
 	join = liblibc.pthread_join,
 	self = liblibc.pthread_self,
 	equal = liblibc.pthread_equal,
 	detach = liblibc.pthread_detach,
 	attribute = liblibc.pthread_attribute,
+	cancel = liblibc.pthread_cancel,
 }
 
 function libc.pthread.assert (msg)
@@ -32,10 +33,12 @@ function libc.pthread.assert (msg)
 end
 
 function libc.pthread.checked_create (msg)
-	return lambda.o {
-		libc.pthread.assert (msg),
-		libc.pthread.create,
-	}
+	return function (tbl)
+		return lambda.o { 
+			libc.pthread.assert (msg), 
+			libc.pthread.create (tbl)
+		}
+	end
 end
 
 function libc.pthread.checked_join (msg)

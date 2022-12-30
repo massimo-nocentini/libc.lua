@@ -424,6 +424,19 @@ static int l_pthread_detach(lua_State* L) {
     return 1;
 }
 
+static int l_pthread_cancel(lua_State* L) {
+
+    lua_getfield (L, -1, "pthread");
+    pthread_t* s = (pthread_t*) lua_touserdata (L, -1);
+    lua_pop (L, 1);
+
+    int retcode = pthread_cancel (*s);
+
+    lua_pushinteger (L, retcode);
+
+    return 1;
+}
+
 static int l_pthread_attribute (lua_State* L) {
 
     lua_getfield (L, -1, "attribute");
@@ -437,7 +450,7 @@ static int l_pthread_attribute (lua_State* L) {
     int detached;
     res = pthread_attr_getdetachstate (attr, &detached);
     if (res != 0) luaL_error (L, "pthread_attr_getdetachstate failed.");
-    lua_pushboolean (L, detached ? 1 : 0);
+    lua_pushboolean (L, detached);
     lua_setfield (L, -2, "detachstate");
 
     return 1;
@@ -458,6 +471,7 @@ static const struct luaL_Reg libc [] = {
     {"pthread_equal", l_pthread_equal},
     {"pthread_detach", l_pthread_detach},
     {"pthread_attribute", l_pthread_attribute},
+    {"pthread_cancel", l_pthread_cancel},
 	{NULL, NULL} /* sentinel */
 };
 

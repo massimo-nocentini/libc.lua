@@ -120,7 +120,7 @@ function Test_pthread:test_pthread_create ()
     local a, j = 0, 100
 
 	local pthread = libc.pthread.checked_create
-        'pthread_create failed.' (function () for i = 1, j do a = a + 1 end end)
+        'pthread_create failed.' {} (function () for i = 1, j do a = a + 1 end end)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -133,30 +133,36 @@ function Test_pthread:test_pthread_sleep ()
     local a, continue = 0, true
     local function inc () a = a + 1 end
 
-    local pthread = libc.pthread.checked_create 'pthread_create failed.' (
+    local pthread = libc.pthread.checked_create 'pthread_create failed.' {} (
         lambda.o { function () return a end, os.execute }, 'sleep 2'
     )
 
-    local pthread_print = libc.pthread.checked_create 'pthread_create failed.' (
+    local pthread_print = libc.pthread.checked_create 'pthread_create failed.' {} (
         lambda.o {
             function () while continue do inc() end return a end,
-            libc.pthread.assert 'pthread_self failed.',
-            libc.pthread.self,
-            lambda.K (libc.pthread.detach),
+            --libc.pthread.assert 'pthread_self failed.',
+            --libc.pthread.self,
+            --lambda.K (libc.pthread.detach),
         }
     )
 
+    libc.pthread.detach (pthread_print)
+    
+    lu.assertTrue (libc.pthread.attribute (pthread).detachstate)
+
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
+
+    lu.assertTrue (libc.pthread.attribute (pthread).detachstate)
 
     lu.assertTrue (v <= a)
 
     continue = false
 
-    --lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
-
     lu.assertTrue (libc.pthread.attribute (pthread_print).detachstate)
 
     local retcode = libc.pthread.join (pthread_print)
+
+    lu.assertTrue (libc.pthread.attribute (pthread_print).detachstate)
 
     lu.assertEquals (retcode, 22)
 
@@ -171,7 +177,7 @@ function Test_pthread:test_pthread_create_named_function ()
         return a, #b
     end
 
-	local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, j, s)
+	local pthread = libc.pthread.checked_create 'pthread_create failed.' {} (A, j, s)
 
     local ra, rs, useless = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -206,7 +212,7 @@ function Test_pthread:test_pthread_equal ()
     end
 
     libc.pthread.self (function (main_thread)
-        local pthread = libc.pthread.checked_create 'pthread_create failed.' (A, main_thread)
+        local pthread = libc.pthread.checked_create 'pthread_create failed.' {} (A, main_thread)
         lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
     end)
 
@@ -239,8 +245,8 @@ function Test_pthread:test_pthread_coro ()
         end
     end
 
-	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' (f, coroA, 10)
-    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' (f, coroB, 10)
+	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' {} (f, coroA, 10)
+    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' {} (f, coroB, 10)
     
     libc.pthread.checked_join 'pthread_join failed.' (pthread_one)
     libc.pthread.checked_join 'pthread_join failed.' (pthread_two)
