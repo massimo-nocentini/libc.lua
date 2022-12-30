@@ -259,7 +259,7 @@ static int l_constants(lua_State *L) {
     lua_pushnumber(L, M_GR + M_SR);         /* Platinum ratio */ 
     lua_setfield(L, -2, "M_PR");
 
-    lua_pushnumber(L, 1.0 - M_SR);  /* Bronze ratio */ 
+    lua_pushnumber(L, 1.0 - M_SR);          /* Bronze ratio */ 
     lua_setfield(L, -2, "M_BR");
 
     return 0;
@@ -272,12 +272,7 @@ static void * pthread_create_callback (void *arg) {
     lua_State* auxstate = ud->L;
     int nargs = ud->idx;
 
-    assert (lua_isfunction (auxstate, 1));
-    lua_pushvalue (auxstate, 1);
-
-    for (int i = 0; i < nargs; i++) lua_pushvalue (auxstate, 2 + i);
-
-    lua_call (auxstate, nargs, LUA_MULTRET);
+    lua_call (auxstate, nargs, LUA_MULTRET);    // all the checks have been done by `l_pthread_create`. 
 
     //pthread_exit (arg);
 
@@ -334,11 +329,6 @@ static int l_pthread_join(lua_State* L) {
     void* userdata = lua_touserdata (L, -1);
     lua_pop (L, 1);
 
-    lua_getfield (L, table_idx, "cothread");
-    lua_State* cothread = lua_tothread (L, -1);
-    assert (cothread != NULL);
-    lua_pop (L, 1);
-
     void *res;
     int flag = pthread_join (*pthread, &res);
 
@@ -347,41 +337,31 @@ static int l_pthread_join(lua_State* L) {
     lua_pushinteger (L, flag);
     nret++;
 
-    if (res != NULL) {
-        assert (res == userdata);
+    if (res == userdata) {
 
         item_t* ud = (item_t*) res;
         lua_State* auxstate = ud->L;
 
-        int returned = lua_gettop (auxstate) - (ud->idx + 1);
+        int returned = lua_gettop (auxstate);// - (ud->idx + 1);
 
         lua_xmove (auxstate, L, returned);
 
         nret += returned;
+
     }
-
-    lua_pushnil (L);
-    lua_setfield (L, table_idx, "cothread");
-
-    lua_pushnil (L);
-    lua_setfield (L, table_idx, "userdata");
-    
-    lua_pushnil (L);
-    lua_setfield (L, table_idx, "pthread");
-    
-    free (userdata);
-    free (pthread);
 
     return nret;
 }
 
 static int l_pthread_self(lua_State* L) {
 
+    luaL_argcheck (L, lua_isfunction (L, -1), 1, "Expected a function that consumes a pthread.");
+
     int nargs = lua_gettop (L);
 
-    pthread_t pthread = pthread_self ();
+    if (nargs > 1) luaL_argerror (L, 2, "Just one argument is expected.");
 
-    assert (lua_isfunction (L, -1));
+    pthread_t pthread = pthread_self ();
 
     lua_pushvalue (L, -1);  // dup the function to be called.
     lua_newtable (L);
@@ -405,7 +385,7 @@ static int l_pthread_equal(lua_State* L) {
 
     int cmp = pthread_equal (*r, *s);
 
-    lua_pushboolean (L, cmp != 0);
+    lua_pushboolean (L, cmp != 0 ? 1 : 0);
 
     return 1;
 }
@@ -417,15 +397,6 @@ static int l_pthread_detach(lua_State* L) {
     lua_pop (L, 1);
 
     int retcode = pthread_detach (*s);
-
-    lua_pushinteger (L, retcode);
-
-    return 1;
-}
-
-static int l_pthread_selfdetach(lua_State* L) {
-
-    int retcode = pthread_detach (pthread_self());
 
     lua_pushinteger (L, retcode);
 
@@ -446,7 +417,6 @@ static const struct luaL_Reg libc [] = {
     {"pthread_self", l_pthread_self},
     {"pthread_equal", l_pthread_equal},
     {"pthread_detach", l_pthread_detach},
-    {"pthread_selfdetach", l_pthread_selfdetach},
 	{NULL, NULL} /* sentinel */
 };
  

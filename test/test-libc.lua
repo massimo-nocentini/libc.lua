@@ -130,7 +130,7 @@ end
 
 function Test_pthread:test_pthread_sleep ()
 
-    local a = 0
+    local a, continue = 0, true
     local function inc () a = a + 1 end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' (
@@ -139,7 +139,7 @@ function Test_pthread:test_pthread_sleep ()
 
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.' (
         lambda.o {
-            function () while true do a = a + 1 end end,
+            function () while continue do inc() end return a end,
             libc.pthread.assert 'pthread_self failed.',
             libc.pthread.self,
             lambda.K (libc.pthread.detach),
@@ -149,6 +149,13 @@ function Test_pthread:test_pthread_sleep ()
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
     lu.assertTrue (v <= a)
+
+    continue = false
+
+    local retcode = libc.pthread.join (pthread_print)
+
+    lu.assertEquals (retcode, 22)
+
 end
 
 function Test_pthread:test_pthread_create_named_function ()
