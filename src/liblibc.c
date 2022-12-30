@@ -279,7 +279,7 @@ static void * pthread_create_callback (void *arg) {
     return arg;
 }
 
-static int l_pthread_create(lua_State *L) {
+static int l_pthread_create_curry (lua_State* L) {
 
     int nargs = lua_gettop (L);     // including the function to be called in the C callback.
 
@@ -296,7 +296,8 @@ static int l_pthread_create(lua_State *L) {
     ud->idx = nargs - 1;
     
     pthread_t* t = (pthread_t*) malloc (sizeof(pthread_t));
-    int res = pthread_create (t, NULL, pthread_create_callback, ud);
+    pthread_attr_t* attr = (pthread_attr_t*) lua_touserdata (L, lua_upvalueindex(1));
+    int res = pthread_create (t, attr, pthread_create_callback, ud);
 
     lua_pushinteger (L, res);
 
@@ -304,6 +305,9 @@ static int l_pthread_create(lua_State *L) {
 
     lua_pushlightuserdata (L, t);
     lua_setfield (L, -2, "pthread");
+
+    lua_pushlightuserdata (L, attr);
+    lua_setfield (L, -2, "attribute");
 
     lua_pushlightuserdata (L, ud);
     lua_setfield (L, -2, "userdata");
@@ -314,6 +318,24 @@ static int l_pthread_create(lua_State *L) {
     lua_remove (L, newthread_pos);
 
     return 2;
+}
+
+static int l_pthread_create (lua_State* L) {
+
+    luaL_argcheck (L, lua_istable (L, -1), 1, "Expected a table of pthread attributes.");
+
+    // for now ignore the given attributes table completely.
+
+    pthread_attr_t* attr = (pthread_attr_t*) malloc (sizeof(pthread_attr_t));
+
+    int s = pthread_attr_init(attr);
+    if (s != 0) luaL_error (L, "pthread_attr_init failed.");
+    
+    lua_pushlightuserdata (L, attr);
+
+    lua_pushcclosure (L, &l_pthread_create_curry, 1);
+
+    return 1;
 }
 
 static int l_pthread_join(lua_State* L) {
@@ -347,7 +369,6 @@ static int l_pthread_join(lua_State* L) {
         lua_xmove (auxstate, L, returned);
 
         nret += returned;
-
     }
 
     return nret;
@@ -403,6 +424,25 @@ static int l_pthread_detach(lua_State* L) {
     return 1;
 }
 
+static int l_pthread_attribute (lua_State* L) {
+
+    lua_getfield (L, -1, "attribute");
+    pthread_attr_t* attr = (pthread_attr_t*) lua_touserdata (L, -1);
+    lua_pop (L, 1);
+
+    lua_newtable (L);
+
+    int res;
+
+    int detached;
+    res = pthread_attr_getdetachstate (attr, &detached);
+    if (res != 0) luaL_error (L, "pthread_attr_getdetachstate failed.");
+    lua_pushboolean (L, detached ? 1 : 0);
+    lua_setfield (L, -2, "detachstate");
+
+    return 1;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
     {"bsearch", l_bsearch},
@@ -417,10 +457,28 @@ static const struct luaL_Reg libc [] = {
     {"pthread_self", l_pthread_self},
     {"pthread_equal", l_pthread_equal},
     {"pthread_detach", l_pthread_detach},
+    {"pthread_attribute", l_pthread_attribute},
 	{NULL, NULL} /* sentinel */
 };
- 
+
+static void pthread_constants (lua_State* L){
+
+    lua_newtable (L);
+
+    lua_pushinteger (L, PTHREAD_CREATE_JOINABLE);
+    lua_setfield (L, -2, "create_joinable");
+
+    lua_pushinteger (L, PTHREAD_CREATE_DETACHED);
+    lua_setfield (L, -2, "create_detached");
+
+    lua_setfield (L, -2, "pthread");
+
+}
+
 int luaopen_liblibc (lua_State *L) {
 	luaL_newlib(L, libc);
+
+    pthread_constants (L);
+
 	return 1;
 }

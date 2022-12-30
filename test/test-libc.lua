@@ -152,6 +152,10 @@ function Test_pthread:test_pthread_sleep ()
 
     continue = false
 
+    --lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
+
+    lu.assertTrue (libc.pthread.attribute (pthread_print).detachstate)
+
     local retcode = libc.pthread.join (pthread_print)
 
     lu.assertEquals (retcode, 22)

@@ -15,11 +15,12 @@ libc.string = {
 }
 
 libc.pthread = {
-	create = liblibc.pthread_create,
+	create = liblibc.pthread_create {},
 	join = liblibc.pthread_join,
 	self = liblibc.pthread_self,
 	equal = liblibc.pthread_equal,
 	detach = liblibc.pthread_detach,
+	attribute = liblibc.pthread_attribute,
 }
 
 function libc.pthread.assert (msg)
