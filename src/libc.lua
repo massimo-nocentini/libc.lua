@@ -22,6 +22,7 @@ libc.pthread = {
 	detach = liblibc.pthread_detach,
 	attribute = liblibc.pthread_attribute,
 	cancel = liblibc.pthread_cancel,
+	mutex_init = liblibc.pthread_mutex_init,
 }
 
 function libc.pthread.assert (msg)
@@ -35,8 +36,8 @@ end
 function libc.pthread.checked_create (msg)
 	return function (tbl)
 		return lambda.o { 
-			libc.pthread.assert (msg), 
-			libc.pthread.create (tbl)
+			libc.pthread.assert (msg),
+			libc.pthread.create (tbl),
 		}
 	end
 end

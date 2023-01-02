@@ -466,6 +466,80 @@ static int l_pthread_attribute (lua_State* L) {
     return 1;
 }
 
+
+static int l_pthread_mutex_curry (lua_State* L) {
+
+    luaL_argcheck (L, lua_isfunction (L, -2), 1, "Expected a function that accepts a mutex and its attributes.");
+    luaL_argcheck (L, lua_isfunction (L, -1), 2, "Expected a function that handles the error in case.");
+
+    int nargs = lua_gettop (L);     // including the function to be called in the C callback.
+    assert (nargs == 2);
+
+    pthread_mutex_t* mutex = (pthread_mutex_t*) lua_touserdata (L, lua_upvalueindex(1));
+    pthread_mutexattr_t* attr = (pthread_mutexattr_t*) lua_touserdata (L, lua_upvalueindex(2));
+    
+    lua_pushvalue (L, -2);  // duplicate the worker function.
+    lua_pushlightuserdata (L, mutex);
+    lua_pushlightuserdata (L, attr);
+    
+    int res = lua_pcall (L, 2, LUA_MULTRET, 0);
+
+    pthread_mutex_destroy (mutex);
+    pthread_mutexattr_destroy (mutex);
+
+    free (mutex);
+    free (attr);
+
+    int nres;
+
+    if (res != LUA_OK) {
+        lua_pushvalue (L, -2);  // duplicate the error handler.
+        lua_pushvalue (L, -2);  // duplicate the error object.
+        lua_remove (L, -3);     // remove the duplicated error object.
+
+        lua_call (L, 1, LUA_MULTRET);
+    }
+
+    nres = lua_gettop (L) - nargs;
+
+    return nres;
+}
+
+static int l_pthread_mutex_init (lua_State* L) {
+
+    int type;
+
+    luaL_argcheck (L, lua_istable (L, -1), 1, "Expected a table of mutex attributes.");
+
+    pthread_mutex_t* mutex = (pthread_mutex_t*) malloc (sizeof(pthread_mutex_t));
+    pthread_mutexattr_t* attr = (pthread_mutexattr_t*) malloc (sizeof(pthread_mutexattr_t));
+
+    int s = pthread_mutexattr_init(attr);
+    if (s != 0) luaL_error (L, "pthread_mutexattr_init failed.");
+
+    /*
+    type = lua_getfield (L, -1, "create_detached");
+    if (type == LUA_TBOOLEAN && lua_toboolean (L, -1) == 1) 
+        pthread_attr_setdetachstate (attr, PTHREAD_CREATE_DETACHED);
+    lua_pop (L, 1);
+    
+    type = lua_getfield (L, -1, "create_joinable");
+    if (type == LUA_TBOOLEAN && lua_toboolean (L, -1) == 1) 
+        pthread_attr_setdetachstate (attr, PTHREAD_CREATE_JOINABLE);
+    lua_pop (L, 1);
+    */
+
+    int s = pthread_mutex_init(mutex, attr);
+    if (s != 0) luaL_error (L, "pthread_mutex_init failed.");
+
+    lua_pushlightuserdata (L, mutex);
+    lua_pushlightuserdata (L, attr);
+
+    lua_pushcclosure (L, &l_pthread_mutex_curry, 2);
+
+    return 1;
+}
+
 static const struct luaL_Reg libc [] = {
 	{"qsort", l_qsort},
     {"bsearch", l_bsearch},
@@ -482,6 +556,7 @@ static const struct luaL_Reg libc [] = {
     {"pthread_detach", l_pthread_detach},
     {"pthread_attribute", l_pthread_attribute},
     {"pthread_cancel", l_pthread_cancel},
+    {"pthread_mutex_init", l_pthread_mutex_init},
 	{NULL, NULL} /* sentinel */
 };
 

@@ -181,7 +181,7 @@ function Test_pthread:test_pthread_sleep_attr ()
         { create_joinable = true, }
         ( lambda.o { get_a , os.execute }, 'sleep 1' )
 
-    local pthread_print = libc.pthread.checked_create 'pthread_create failed.' 
+    local pthread_print = libc.pthread.checked_create 'pthread_create failed.'
         { create_detached = true, }
         ( function () while continue do inc() end return a end )
     
@@ -285,6 +285,32 @@ function Test_pthread:test_pthread_coro ()
 
 end
 
+function Test_pthread:test_pthread_sync_missing ()
+
+    local tot, N = 0, 1000000
+
+    local function doer (actor, n)
+
+        for j = 1, n do
+            local v = tot
+            v = v + 1
+            tot = v
+        end
+
+        return tot
+    end
+
+	local pthread_a = libc.pthread.checked_create
+        'Failed to create the first worker.' {} (doer, 'A', N)
+
+    local pthread_b = libc.pthread.checked_create
+        'Failed to create the second worker.' {} (doer, 'B', N)
+
+    local v = libc.pthread.checked_join 'Failed in joining the first worker.' (pthread_a)
+    local w = libc.pthread.checked_join 'Failed in joining the second worker.' (pthread_b)
+
+    lu.assertTrue (tot < N * 2)
+end
 
 --------------------------------------------------------------------------------
 
