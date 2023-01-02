@@ -1,10 +1,9 @@
 
 linux:
-	gcc -O2 -std=gnu99 -fPIC -Wall -I/usr/local/include/ -s -shared -o \
-		liblibc.so liblibc.c -L/usr/local/lib/ -llua 
+	gcc -O2 -std=gnu11 -fPIC -Wall -s -shared -o liblibc.so liblibc.c -llua -lpthread
 
 macos:
-	cc -O2 -std=c11 -fPIC -Wall -dynamiclib -o liblibc.dylib liblibc.c -llua
+	cc -O2 -std=c11 -fPIC -Wall -dynamiclib -o liblibc.dylib liblibc.c -llua -lpthread
 
 install:
 	mkdir -p /usr/local/lib/lua/5.4/	# just for ensuring that the dest dir exists

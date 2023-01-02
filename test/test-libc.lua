@@ -132,9 +132,10 @@ function Test_pthread:test_pthread_sleep ()
 
     local a, continue = 0, true
     local function inc () a = a + 1 end
+    local function get_a () return a end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' {} (
-        lambda.o { function () return a end, os.execute }, 'sleep 2'
+        lambda.o { get_a , os.execute }, 'sleep 1'
     )
 
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.' {} (
@@ -145,27 +146,28 @@ function Test_pthread:test_pthread_sleep ()
             --lambda.K (libc.pthread.detach),
         }
     )
-
-    libc.pthread.detach (pthread_print)
     
-    lu.assertTrue (libc.pthread.attribute (pthread).detachstate)
+    libc.pthread.checked_detach 'Unable to detach the worker thread.' (pthread_print)
+    
+    lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
-    lu.assertTrue (libc.pthread.attribute (pthread).detachstate)
+    lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
 
     lu.assertTrue (v <= a)
 
-    continue = false
-
-    lu.assertTrue (libc.pthread.attribute (pthread_print).detachstate)
+    lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
 
     local retcode = libc.pthread.join (pthread_print)
 
-    lu.assertTrue (libc.pthread.attribute (pthread_print).detachstate)
+    lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
 
     lu.assertEquals (retcode, 22)
 
+    --libc.pthread.checked_cancel 'Unable to cancel the worker thread.' (pthread_print)
+
+    continue = false    -- this is necessary to stop the worker thread, otherwise a segmentation fault occurs.
 end
 
 function Test_pthread:test_pthread_create_named_function ()

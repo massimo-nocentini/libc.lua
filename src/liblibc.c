@@ -274,7 +274,7 @@ static void * pthread_create_callback (void *arg) {
 
     lua_call (auxstate, nargs, LUA_MULTRET);    // all the checks have been done by `l_pthread_create`. 
 
-    //pthread_exit (arg);
+    pthread_exit (arg);
 
     return arg;
 }

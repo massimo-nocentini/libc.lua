@@ -48,6 +48,20 @@ function libc.pthread.checked_join (msg)
 	}
 end
 
+function libc.pthread.checked_detach (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.detach,
+	}
+end
+
+function libc.pthread.checked_cancel (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.cancel,
+	}
+end
+
 function libc.stdlib.lteqgtcmp (a, b)  
 	if a < b then return -1
 	elseif a == b then return 0
