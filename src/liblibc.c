@@ -322,15 +322,25 @@ static int l_pthread_create_curry (lua_State* L) {
 
 static int l_pthread_create (lua_State* L) {
 
-    luaL_argcheck (L, lua_istable (L, -1), 1, "Expected a table of pthread attributes.");
+    int type;
 
-    // for now ignore the given attributes table completely.
+    luaL_argcheck (L, lua_istable (L, -1), 1, "Expected a table of pthread attributes.");
 
     pthread_attr_t* attr = (pthread_attr_t*) malloc (sizeof(pthread_attr_t));
 
     int s = pthread_attr_init(attr);
     if (s != 0) luaL_error (L, "pthread_attr_init failed.");
+
+    type = lua_getfield (L, -1, "create_detached");
+    if (type == LUA_TBOOLEAN && lua_toboolean (L, -1) == 1) 
+        pthread_attr_setdetachstate (attr, PTHREAD_CREATE_DETACHED);
+    lua_pop (L, 1);
     
+    type = lua_getfield (L, -1, "create_joinable");
+    if (type == LUA_TBOOLEAN && lua_toboolean (L, -1) == 1) 
+        pthread_attr_setdetachstate (attr, PTHREAD_CREATE_JOINABLE);
+    lua_pop (L, 1);
+
     lua_pushlightuserdata (L, attr);
 
     lua_pushcclosure (L, &l_pthread_create_curry, 1);

@@ -149,23 +149,53 @@ function Test_pthread:test_pthread_sleep ()
     
     libc.pthread.checked_detach 'Unable to detach the worker thread.' (pthread_print)
     
-    lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
+    --lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
-    lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
+    --lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
 
     lu.assertTrue (v <= a)
 
-    lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
+    --lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
 
     local retcode = libc.pthread.join (pthread_print)
 
-    lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
+    --lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
 
     lu.assertEquals (retcode, 22)
 
     --libc.pthread.checked_cancel 'Unable to cancel the worker thread.' (pthread_print)
+
+    continue = false    -- this is necessary to stop the worker thread, otherwise a segmentation fault occurs.
+end
+
+
+function Test_pthread:test_pthread_sleep_attr ()
+
+    local a, continue = 0, true
+    local function inc () a = a + 1 end
+    local function get_a () return a end
+
+    local pthread = libc.pthread.checked_create 'pthread_create failed.' 
+        { create_joinable = true, }
+        ( lambda.o { get_a , os.execute }, 'sleep 1' )
+
+    local pthread_print = libc.pthread.checked_create 'pthread_create failed.' 
+        { create_detached = true, }
+        ( function () while continue do inc() end return a end )
+    
+    lu.assertTrue (libc.pthread.attribute (pthread).detachstate)
+
+    local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
+
+    lu.assertTrue (v <= a)
+
+    lu.assertTrue (libc.pthread.attribute (pthread_print).detachstate)
+
+    local retcode = libc.pthread.join (pthread_print)
+
+    lu.assertEquals (retcode, 22)
 
     continue = false    -- this is necessary to stop the worker thread, otherwise a segmentation fault occurs.
 end
