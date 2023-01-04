@@ -19,7 +19,7 @@ local function T (mtx)
 
     local tot = 0
 
-    local function doer ()
+    local function doer (n)
 
         local times = 0
 
@@ -29,19 +29,25 @@ local function T (mtx)
             tot = v
         end)
 
-        lambda.fromtodo (1, N) (function (i) times = times + 1; D(mtx, i) end)
+        lambda.fromtodo (1, n) (function (i) times = times + 1; D(mtx, i) end)
 
         return  times
     end
 
-    local _, pthread_a = libc.pthread.create ({ create_joinable = true, }, doer)
+    local pthread_a = libc.pthread.checked_create 'Failed creating the first worker.' 
+                                                  ({ create_joinable = true, }, doer) (N)
 
-    local _, pthread_b = libc.pthread.create ({ create_joinable = true, }, doer)
+    local pthread_b = libc.pthread.checked_create 'Failed creating the second worker.' 
+                                                  ({ create_joinable = true, }, doer) (N)
+
+    local pthread_c = libc.pthread.checked_create 'Failed creating the third worker.' 
+                                                  ({ create_joinable = true, }, doer) (N)                                            
 
     local _, v = libc.pthread.join  (pthread_a)
     local _, w = libc.pthread.join  (pthread_b)
+    local _, z = libc.pthread.join  (pthread_c)
 
-    assert (v == w and w == N)
+    assert (v == w and w == z and z == N)
 
     return tot
 end

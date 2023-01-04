@@ -308,54 +308,35 @@ static void *pthread_create_callback(void *arg)
 
 static int l_pthread_create_curry(lua_State *L)
 {
-     int nargs = lua_gettop(L);
-
-     
-}
-
-static int l_pthread_create(lua_State *L)
-{
-
-    int nargs = lua_gettop(L) - 2;
-
     int type;
 
-    pthread_attr_t attr;
+    int nargs = lua_gettop(L);
 
-    type = pthread_attr_init(&attr);
-    if (type != 0)
-        luaL_error(L, "pthread_attr_init failed.");
+    lua_State *S = lua_tothread(L, lua_upvalueindex(3));
+    item_t *ud = (item_t *)lua_touserdata(L, lua_upvalueindex(4));
+    
+    assert(S == ud->L); // this is our invariant.
 
-    type = lua_getfield(L, 1, "create_detached");
-    if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    lua_pop(L, 1);
+    pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, lua_upvalueindex(5));
 
-    type = lua_getfield(L, 1, "create_joinable");
-    if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    lua_pop(L, 1);
-
-    lua_State *S = lua_newthread(L);
-    lua_replace(L, 1);
+    ud->idx = nargs;
 
     pthread_t *t = (pthread_t *)malloc(sizeof(pthread_t));
 
-    item_t *ud = (item_t *)malloc(sizeof(item_t));
-    ud->L = S;
-    ud->idx = nargs;
+    lua_pushvalue(L, lua_upvalueindex(1)); // push the function to be run in a pthread.
+    lua_insert(L, 1);                      // and move it as the first argument.
+    lua_pushvalue(L, lua_upvalueindex(3)); // push the calling coroutine.
+    lua_xmove(L, ud->L, nargs + 2);        // move everything on the newly created coroutine.
 
-    lua_pushthread(L); // this is the calling thread.
-
-    lua_xmove(L, S, nargs + 2);
-
-    type = pthread_create(t, &attr, &pthread_create_callback, ud);
+    type = pthread_create(t, attr, &pthread_create_callback, ud);
 
     lua_pushinteger(L, type);
 
-    type = pthread_attr_destroy(&attr);
+    type = pthread_attr_destroy(attr);
     if (type != 0)
         luaL_error(L, "pthread_attr_destroy failed.");
+
+    free(attr);
 
     lua_newtable(L);
 
@@ -365,10 +346,49 @@ static int l_pthread_create(lua_State *L)
     lua_pushlightuserdata(L, ud);
     lua_setfield(L, -2, "userdata");
 
-    lua_pushvalue(L, 1);
+    lua_pushvalue(L, lua_upvalueindex(3));
     lua_setfield(L, -2, "cothread");
 
     return 2;
+}
+
+static int l_pthread_create(lua_State *L)
+{
+    luaL_checktype(L, 1, LUA_TTABLE);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    luaL_checktype(L, 3, LUA_TNONE); // enforce exactly two arguments.
+
+    int type;
+
+    pthread_attr_t *attr = (pthread_attr_t *)malloc(sizeof(pthread_attr_t));
+
+    type = pthread_attr_init(attr);
+    if (type != 0)
+        luaL_error(L, "pthread_attr_init failed.");
+
+    type = lua_getfield(L, 1, "create_detached");
+    if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
+        pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
+    lua_pop(L, 1);
+
+    type = lua_getfield(L, 1, "create_joinable");
+    if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
+        pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
+    lua_pop(L, 1);
+
+    type = lua_pushthread(L); // this is the calling thread, doesn't mind if it is the main or not.
+
+    lua_State *S = lua_newthread(L); // push a new thread.
+
+    item_t *ud = (item_t *)malloc(sizeof(item_t));
+    ud->L = S;
+
+    lua_pushlightuserdata(L, ud);
+    lua_pushlightuserdata(L, attr);
+
+    lua_pushcclosure(L, l_pthread_create_curry, 5); // we also include the function given as second argument.
+
+    return 1;
 }
 
 static int l_pthread_join(lua_State *L)
@@ -400,10 +420,12 @@ static int l_pthread_join(lua_State *L)
 
         int returned = ud->idx;
 
+        free (pthread);
+        free (ud);
+
         if (returned == -1)
         {
             lua_xmove(auxstate, L, 1);
-            printf("Hello\n");
             lua_error(L);
         }
         else
