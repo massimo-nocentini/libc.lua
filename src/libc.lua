@@ -20,7 +20,6 @@ libc.pthread = {
 	self = liblibc.pthread_self,
 	equal = liblibc.pthread_equal,
 	detach = liblibc.pthread_detach,
-	attribute = liblibc.pthread_attribute,
 	cancel = liblibc.pthread_cancel,
 	mutex_init = liblibc.pthread_mutex_init,
 	mutex_lock = liblibc.pthread_mutex_lock,
@@ -37,10 +36,10 @@ function libc.pthread.assert (msg)
 end
 
 function libc.pthread.checked_create (msg)
-	return function (attr_tbl, f)
+	return function (attr_tbl)
 		return lambda.o { 
 			libc.pthread.assert (msg),
-			libc.pthread.create (attr_tbl, f),
+			libc.pthread.create (attr_tbl),
 		}
 	end
 end
@@ -66,15 +65,25 @@ function libc.pthread.checked_cancel (msg)
 	}
 end
 
-function libc.pthread.critical_section (f)
+function libc.pthread.checked_mutex_lock (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.mutex_lock,
+	}
+end
 
-	return function (mtx, ...)
-		assert (libc.pthread.mutex_lock (mtx) == 0)
-		local v = table.pack (f (...))
-		assert (libc.pthread.mutex_unlock (mtx) == 0)
-		return table.unpack (v)
-	end
+function libc.pthread.checked_mutex_unlock (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.mutex_unlock,
+	}
+end
 
+function libc.pthread.checked_mutex_trylock (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.mutex_trylock,
+	}
 end
 
 function libc.stdlib.lteqgtcmp (a, b)  

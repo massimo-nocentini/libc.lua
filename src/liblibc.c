@@ -314,7 +314,7 @@ static int l_pthread_create_curry(lua_State *L)
 
     lua_State *S = lua_tothread(L, lua_upvalueindex(3));
     item_t *ud = (item_t *)lua_touserdata(L, lua_upvalueindex(4));
-    
+
     assert(S == ud->L); // this is our invariant.
 
     pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, lua_upvalueindex(5));
@@ -355,8 +355,7 @@ static int l_pthread_create_curry(lua_State *L)
 static int l_pthread_create(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
-    luaL_checktype(L, 2, LUA_TFUNCTION);
-    luaL_checktype(L, 3, LUA_TNONE); // enforce exactly two arguments.
+    luaL_checktype(L, 2, LUA_TNONE); // enforce exactly two arguments.
 
     int type;
 
@@ -375,6 +374,10 @@ static int l_pthread_create(lua_State *L)
     if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
         pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
     lua_pop(L, 1);
+
+    type = lua_getfield(L, 1, "start_function");
+    if (type != LUA_TFUNCTION)
+        luaL_error(L, "The attributes table has to have the `start_function` field.");
 
     type = lua_pushthread(L); // this is the calling thread, doesn't mind if it is the main or not.
 
@@ -420,8 +423,8 @@ static int l_pthread_join(lua_State *L)
 
         int returned = ud->idx;
 
-        free (pthread);
-        free (ud);
+        free(pthread);
+        free(ud);
 
         if (returned == -1)
         {
@@ -430,9 +433,7 @@ static int l_pthread_join(lua_State *L)
         }
         else
         {
-            // returned--; // because the first argument is the status returned by the coroutine.
             lua_xmove(auxstate, L, returned);
-            // assert (lua_gettop (auxstate) == 1);
             int rs = lua_resetthread(auxstate);
             assert(rs == LUA_OK);
         }
@@ -507,27 +508,6 @@ static int l_pthread_cancel(lua_State *L)
     int retcode = pthread_cancel(*s);
 
     lua_pushinteger(L, retcode);
-
-    return 1;
-}
-
-static int l_pthread_attribute(lua_State *L)
-{
-
-    lua_getfield(L, -1, "attribute");
-    pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-
-    lua_newtable(L);
-
-    int res;
-
-    int detached;
-    res = pthread_attr_getdetachstate(attr, &detached);
-    if (res != 0)
-        luaL_error(L, "pthread_attr_getdetachstate failed.");
-    lua_pushboolean(L, detached);
-    lua_setfield(L, -2, "detachstate");
 
     return 1;
 }
@@ -658,7 +638,6 @@ static const struct luaL_Reg libc[] = {
     {"pthread_self", l_pthread_self},
     {"pthread_equal", l_pthread_equal},
     {"pthread_detach", l_pthread_detach},
-    {"pthread_attribute", l_pthread_attribute},
     {"pthread_cancel", l_pthread_cancel},
     {"pthread_mutex_init", l_pthread_mutex_init},
     {"pthread_mutex_lock", l_pthread_mutex_lock},
