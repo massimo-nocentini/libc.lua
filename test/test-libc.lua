@@ -330,9 +330,11 @@ function Test_pthread:test_pthread_sync_mutex ()
                 times = times + 1;  -- I can safely update my own local `times`.
                 
                 P (mtx) -- prolaag, short for probeer te verlagen, literally "try to reduce".
-                local v = tot
-                v = v + 1
-                tot = v
+                do
+                    local v = tot
+                    v = v + 1
+                    tot = v
+                end
                 V (mtx) -- vrijgave, literally "release".
 
             end
