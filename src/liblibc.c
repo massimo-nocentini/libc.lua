@@ -287,19 +287,12 @@ static void *pthread_create_callback(void *arg)
     lua_State *auxstate = ud->L;
     int nargs = ud->idx;
 
-    lua_State *from = lua_tothread(auxstate, -1);
-    lua_pop(auxstate, 1);
-
     assert(lua_isfunction(auxstate, 1));
-    // lua_pushvalue (auxstate, 1);
 
     int nres, retcode;
-    retcode = lua_resume(auxstate, from, nargs, &nres);
-    // retcode = lua_pcall (auxstate, nargs, LUA_MULTRET, 0);
+    retcode = lua_resume(auxstate, NULL, nargs, &nres);
 
-    // nres = lua_gettop (auxstate);
-
-    ud->idx = (retcode == LUA_OK || retcode == LUA_YIELD) ? nres : -1;
+    ud->idx = retcode == LUA_OK ? nres : -1;
 
     pthread_exit(arg);
 
@@ -312,25 +305,24 @@ static int l_pthread_create_curry(lua_State *L)
 
     int nargs = lua_gettop(L);
 
-    lua_State *S = lua_tothread(L, lua_upvalueindex(3));
-    item_t *ud = (item_t *)lua_touserdata(L, lua_upvalueindex(4));
+    pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, lua_upvalueindex(1));
 
-    assert(S == ud->L); // this is our invariant.
+    lua_State *S = lua_newthread(L); // push a new thread.
+    lua_insert(L, 1);                //  and move it to the first position.
 
-    pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, lua_upvalueindex(5));
-
+    item_t *ud = (item_t *)malloc(sizeof(item_t));
+    ud->L = S;
     ud->idx = nargs;
 
     pthread_t *t = (pthread_t *)malloc(sizeof(pthread_t));
 
-    lua_pushvalue(L, lua_upvalueindex(1)); // push the function to be run in a pthread.
-    lua_insert(L, 1);                      // and move it as the first argument.
-    lua_pushvalue(L, lua_upvalueindex(3)); // push the calling coroutine.
-    lua_xmove(L, ud->L, nargs + 2);        // move everything on the newly created coroutine.
+    lua_pushvalue(L, lua_upvalueindex(2)); // push the function to be run in a pthread.
+    lua_insert(L, 2);                      // and move it as second argument.
+    lua_xmove(L, S, nargs + 1);            // move everything on the newly created coroutine.
 
     type = pthread_create(t, attr, &pthread_create_callback, ud);
 
-    lua_pushinteger(L, type);
+    lua_pushinteger(L, type); // save the flag on the stack before reusing it.
 
     type = pthread_attr_destroy(attr);
     if (type != 0)
@@ -346,8 +338,9 @@ static int l_pthread_create_curry(lua_State *L)
     lua_pushlightuserdata(L, ud);
     lua_setfield(L, -2, "userdata");
 
-    lua_pushvalue(L, lua_upvalueindex(3));
+    lua_pushvalue(L, 1);
     lua_setfield(L, -2, "cothread");
+    lua_remove(L, 1);
 
     return 2;
 }
@@ -365,31 +358,19 @@ static int l_pthread_create(lua_State *L)
     if (type != 0)
         luaL_error(L, "pthread_attr_init failed.");
 
-    type = lua_getfield(L, 1, "create_detached");
-    if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
-        pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
+    type = lua_getfield(L, 1, "setdetachstate");
+    if (type == LUA_TNUMBER)
+        pthread_attr_setdetachstate(attr, lua_tointeger(L, -1));
     lua_pop(L, 1);
 
-    type = lua_getfield(L, 1, "create_joinable");
-    if (type == LUA_TBOOLEAN && lua_toboolean(L, -1) == 1)
-        pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
-    lua_pop(L, 1);
+    lua_pushlightuserdata(L, attr);
 
     type = lua_getfield(L, 1, "start_function");
     if (type != LUA_TFUNCTION)
         luaL_error(L, "The attributes table has to have the `start_function` field.");
+    // leave the function on the stack.
 
-    type = lua_pushthread(L); // this is the calling thread, doesn't mind if it is the main or not.
-
-    lua_State *S = lua_newthread(L); // push a new thread.
-
-    item_t *ud = (item_t *)malloc(sizeof(item_t));
-    ud->L = S;
-
-    lua_pushlightuserdata(L, ud);
-    lua_pushlightuserdata(L, attr);
-
-    lua_pushcclosure(L, l_pthread_create_curry, 5); // we also include the function given as second argument.
+    lua_pushcclosure(L, l_pthread_create_curry, 2); // we also include the function given as second argument.
 
     return 1;
 }
@@ -648,7 +629,6 @@ static const struct luaL_Reg libc[] = {
 
 static void pthread_constants(lua_State *L)
 {
-
     lua_newtable(L);
 
     lua_pushinteger(L, PTHREAD_CREATE_JOINABLE);

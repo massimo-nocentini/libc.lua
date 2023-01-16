@@ -25,6 +25,8 @@ libc.pthread = {
 	mutex_lock = liblibc.pthread_mutex_lock,
 	mutex_unlock = liblibc.pthread_mutex_unlock,
 	mutex_trylock = liblibc.pthread_mutex_trylock,
+	create_joinable = liblibc.pthread.create_joinable,
+	create_detached = liblibc.pthread.create_detached,
 }
 
 function libc.pthread.assert (msg)

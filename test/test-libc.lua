@@ -120,7 +120,9 @@ function Test_pthread:test_pthread_create ()
     local a, j = 0, 100
 
 	local pthread = libc.pthread.checked_create
-        'pthread_create failed.' { start_function = function () for i = 1, j do a = a + 1 end end } ()
+        'pthread_create failed.' 
+        { start_function = function () for i = 1, j do a = a + 1 end end } 
+        ()
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -180,11 +182,17 @@ function Test_pthread:test_pthread_sleep_attr ()
     local function get_a () return a end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' 
-        { create_joinable = true, start_function = lambda.o { get_a , os.execute } }
+        { 
+            setdetachstate = libc.pthread.create_joinable, 
+            start_function = lambda.o { get_a , os.execute } 
+        }
         'sleep 1'
 
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.'
-        { create_detached = true, start_function = function () while continue do inc() end return a end }
+        { 
+            setdetachstate = libc.pthread.create_detached, 
+            start_function = function () while continue do inc() end return a end 
+        }
         ()
     
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
@@ -329,12 +337,12 @@ function Test_pthread:test_pthread_sync_mutex ()
 
                 times = times + 1;  -- I can safely update my own local `times`.
                 
-                P (mtx) -- prolaag, short for probeer te verlagen, literally "try to reduce".
-                do
-                    local v = tot
-                    v = v + 1
-                    tot = v
-                end
+                P (mtx) -- prolaag, short for "probeer te verlagen", literally "try to reduce".
+                
+                local v = tot
+                v = v + 1
+                tot = v
+            
                 V (mtx) -- vrijgave, literally "release".
 
             end
@@ -344,29 +352,30 @@ function Test_pthread:test_pthread_sync_mutex ()
 
         local pthread_a = libc.pthread.checked_create 
                             'Failed creating the first worker.' 
-                            { create_joinable = true, start_function = doer } 
+                            { setdetachstate = libc.pthread.create_joinable , start_function = doer } 
                             ('A', N)
 
         local pthread_b = libc.pthread.checked_create 
                             'Failed creating the second worker.' 
-                            { create_joinable = true, start_function = doer } 
+                            { setdetachstate = libc.pthread.create_joinable , start_function = doer } 
                             ('B', N)
 
         local pthread_c = libc.pthread.checked_create
                             'Failed creating the third worker.'
-                            { create_joinable = true, start_function = doer } 
+                            { setdetachstate = libc.pthread.create_joinable , start_function = doer } 
                             ('C', N)
 
-        local v = libc.pthread.checked_join 'Failed to join the first pthread.' (pthread_a)
+        local v = libc.pthread.checked_join 'Failed to join the first pthread.'  (pthread_a)
         local w = libc.pthread.checked_join 'Failed to join the second pthread.' (pthread_b)
-        local z = libc.pthread.checked_join 'Failed to join the third pthread.' (pthread_c)
+        local z = libc.pthread.checked_join 'Failed to join the third pthread.'  (pthread_c)
 
         assert (v == w and w == z and z == N)
 
         return tot
     end
 
-    local t = lambda.without_gc_do (function () return libc.pthread.mutex_init {} (T, error) end)
+    local with_mutex = lambda.without_gc_do (libc.pthread.mutex_init {}, error)
+    local t = with_mutex (T, error)
 
     lu.assertEquals (t, 3 * N)
     
