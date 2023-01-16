@@ -545,17 +545,10 @@ static int l_pthread_mutex_init(lua_State *L)
     if (s != 0)
         luaL_error(L, "pthread_mutexattr_init failed.");
 
-    /*
-    type = lua_getfield (L, -1, "create_detached");
-    if (type == LUA_TBOOLEAN && lua_toboolean (L, -1) == 1)
-        pthread_attr_setdetachstate (attr, PTHREAD_CREATE_DETACHED);
-    lua_pop (L, 1);
-
-    type = lua_getfield (L, -1, "create_joinable");
-    if (type == LUA_TBOOLEAN && lua_toboolean (L, -1) == 1)
-        pthread_attr_setdetachstate (attr, PTHREAD_CREATE_JOINABLE);
-    lua_pop (L, 1);
-    */
+    s = lua_getfield(L, -1, "settype");
+    if (s == LUA_TNUMBER)
+        pthread_mutexattr_settype(attr, lua_tointeger(L, -1));
+    lua_pop(L, 1);
 
     s = pthread_mutex_init(mutex, attr);
     if (s != 0)
@@ -593,15 +586,64 @@ static int l_pthread_mutex_unlock(lua_State *L)
     return 1;
 }
 
-static int l_pthread_mutex_trylock(lua_State *L)
+static int l_pthread_cond_signal(lua_State *L)
 {
 
-    pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, -1);
+    pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -1);
 
-    int retcode = pthread_mutex_trylock(s);
+    int retcode = pthread_cond_signal(s);
 
     lua_pushinteger(L, retcode);
 
+    return 1;
+}
+
+static int l_pthread_cond_broadcast(lua_State *L)
+{
+
+    pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -1);
+
+    int retcode = pthread_cond_broadcast(s);
+
+    lua_pushinteger(L, retcode);
+
+    return 1;
+}
+
+static int l_pthread_cond_wait(lua_State *L)
+{
+    pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -2);
+    pthread_mutex_t *m = (pthread_mutex_t *)lua_touserdata(L, -1);
+    
+    int retcode = pthread_cond_wait(s, m);
+
+    lua_pushinteger(L, retcode);
+
+    return 1;
+}
+
+static int l_pthread_cond_init(lua_State *L)
+{
+    pthread_cond_t *cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
+
+    int s = pthread_cond_init(cond, NULL);
+
+    lua_pushinteger (L, s);
+    lua_pushlightuserdata(L, cond);
+    
+    return 2;
+}
+
+static int l_pthread_cond_destroy(lua_State *L)
+{
+    pthread_cond_t *cond = (pthread_cond_t *)lua_touserdata(L, -1);
+
+    int s = pthread_cond_destroy(cond);
+
+    free (cond);
+
+    lua_pushinteger (L, s);
+    
     return 1;
 }
 
@@ -623,7 +665,11 @@ static const struct luaL_Reg libc[] = {
     {"pthread_mutex_init", l_pthread_mutex_init},
     {"pthread_mutex_lock", l_pthread_mutex_lock},
     {"pthread_mutex_unlock", l_pthread_mutex_unlock},
-    {"pthread_mutex_trylock", l_pthread_mutex_trylock},
+    {"pthread_cond_init", l_pthread_cond_init},
+    {"pthread_cond_destroy", l_pthread_cond_destroy},
+    {"pthread_cond_signal", l_pthread_cond_signal},
+    {"pthread_cond_broadcast", l_pthread_cond_broadcast},
+    {"pthread_cond_wait", l_pthread_cond_wait},
     {NULL, NULL} /* sentinel */
 };
 
@@ -636,6 +682,18 @@ static void pthread_constants(lua_State *L)
 
     lua_pushinteger(L, PTHREAD_CREATE_DETACHED);
     lua_setfield(L, -2, "create_detached");
+
+    lua_pushinteger(L, PTHREAD_MUTEX_NORMAL);
+    lua_setfield(L, -2, "mutex_normal");
+
+    lua_pushinteger(L, PTHREAD_MUTEX_ERRORCHECK);
+    lua_setfield(L, -2, "mutex_errorcheck");
+
+    lua_pushinteger(L, PTHREAD_MUTEX_RECURSIVE);
+    lua_setfield(L, -2, "mutex_recursive");
+
+    lua_pushinteger(L, PTHREAD_MUTEX_DEFAULT);
+    lua_setfield(L, -2, "mutex_default");
 
     lua_setfield(L, -2, "pthread");
 }

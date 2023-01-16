@@ -24,10 +24,12 @@ libc.pthread = {
 	mutex_init = liblibc.pthread_mutex_init,
 	mutex_lock = liblibc.pthread_mutex_lock,
 	mutex_unlock = liblibc.pthread_mutex_unlock,
-	mutex_trylock = liblibc.pthread_mutex_trylock,
-	create_joinable = liblibc.pthread.create_joinable,
-	create_detached = liblibc.pthread.create_detached,
+	cond_signal = liblibc.pthread_cond_signal,
+	cond_broadcast = liblibc.pthread_cond_broadcast,
+	cond_wait = liblibc.pthread_cond_wait,
 }
+
+setmetatable (libc.pthread, {__index = liblibc.pthread})
 
 function libc.pthread.assert (msg)
 	return function (retcode, ...)
@@ -86,6 +88,64 @@ function libc.pthread.checked_mutex_trylock (msg)
 		libc.pthread.assert (msg),
 		libc.pthread.mutex_trylock,
 	}
+end
+
+function libc.pthread.checked_cond_signal (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.cond_signal,
+	}
+end
+
+function libc.pthread.checked_cond_broadcast (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.cond_broadcast,
+	}
+end
+
+function libc.pthread.checked_cond_wait (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		libc.pthread.cond_wait,
+	}
+end
+
+function libc.pthread.checked_cond_init (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_cond_init,
+	}
+end
+
+function libc.pthread.checked_cond_destroy (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_cond_destroy,
+	}
+end
+
+function libc.pthread.with_cond (f, h)
+
+	h = h or error
+
+	return function (...)
+
+		local cond = libc.pthread.checked_cond_init 'pthread_cond_init failed.' ()
+		
+		local function D () 
+			return libc.pthread.checked_cond_destroy 'pthread_cond_destroy failed.' (cond) 
+		end
+
+		return lambda.o {
+			lambda.precv_before (D, h),
+			pcall,
+			lambda.ellipses_append (f),
+			lambda.ellipses_append (cond),
+		}
+		(...)
+	end
+
 end
 
 function libc.stdlib.lteqgtcmp (a, b)  

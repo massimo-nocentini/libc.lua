@@ -381,6 +381,85 @@ function Test_pthread:test_pthread_sync_mutex ()
     
 end
 
+function Test_pthread:test_pthread_mutex_cond ()
+
+    local totThreads, numLive, numUnjoined, threads = 5, 0, 0, {}
+
+    local P = libc.pthread.checked_mutex_lock   'pthread_mutex_lock failed.'
+    local V = libc.pthread.checked_mutex_unlock 'pthread_mutex_unlock failed.'
+    local S = libc.pthread.checked_cond_signal 'pthread_cond_signal failed.'
+    local W = libc.pthread.checked_cond_wait 'pthread_cond_wait failed.'
+
+    local function T (mtx)
+
+        local function D (threadDied)
+
+            local function A (idx) 
+            
+                os.execute ('sleep ' .. threads [idx].sleeptime)
+
+                print (string.format ('pthread %d terminated.', idx))
+
+                threads [idx].state = 'terminated'
+
+                P (mtx) 
+                
+                numUnjoined = numUnjoined + 1
+                
+                V (mtx)
+                
+                S (threadDied)
+
+            end
+
+            for i = 1, totThreads do
+
+                local t = libc.pthread.checked_create
+                            ('Failed creating worker ' .. i)
+                            { setdetachstate = libc.pthread.create_joinable, start_function = A }
+                
+                threads [i] = { sleeptime = 1, state = 'alive', idx = i, }
+                threads [i].pthread = t (i)
+
+                numLive = numLive + 1
+
+            end
+
+            while numLive > 0 do
+                
+                P (mtx)
+
+                while numUnjoined == 0 do W (threadDied, mtx) end
+
+                for i = 1, totThreads do
+
+                    local t = threads [i]
+                    
+                    if t.state == 'terminated' then
+                        libc.pthread.join (t.pthread)
+                        t.state = 'joined'
+                        numLive = numLive - 1
+                        numUnjoined = numUnjoined - 1
+
+                        print (string.format ("Reaped thread %d (numLive=%d)\n", t.idx, numLive))
+                    end
+    
+                end
+
+                V (mtx)
+            end
+            
+        end
+
+        return libc.pthread.with_cond (D, error) ()
+
+    end
+
+    local with_mutex = lambda.without_gc_do (libc.pthread.mutex_init {}, error)
+    local t = with_mutex (T, error)
+    
+end
+
 --------------------------------------------------------------------------------
 
 os.exit( lu.LuaUnit.run() )
