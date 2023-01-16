@@ -434,10 +434,13 @@ function Test_pthread:test_pthread_mutex_cond ()
                 for i = 1, totThreads do
 
                     local t = threads [i]
-                    
+
                     if t.state == 'terminated' then
+
                         libc.pthread.join (t.pthread)
+                        
                         t.state = 'joined'
+                        
                         numLive = numLive - 1
                         numUnjoined = numUnjoined - 1
 
