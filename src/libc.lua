@@ -164,6 +164,6 @@ libc.math = {
 	fma = liblibc.fma,
 }
 
-liblibc.constants (libc.math)	-- augment the `math` table with some constants
+setmetatable (libc.math, {__index = liblibc.math})
 
 return libc

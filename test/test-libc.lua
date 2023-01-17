@@ -341,7 +341,7 @@ function Test_pthread:test_pthread_sync_mutex ()
 
             end
 
-            return  times
+            return times
         end
 
         local pthread_a = libc.pthread.checked_create 

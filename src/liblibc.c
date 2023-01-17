@@ -19,7 +19,7 @@ typedef struct item_s
     int idx;
 } item_t;
 
-static int compare(const void *v, const void *w)
+int compare(const void *v, const void *w)
 {
 
     item_t *vc = (item_t *)v;
@@ -37,7 +37,7 @@ static int compare(const void *v, const void *w)
     return comparison;
 }
 
-static int l_qsort(lua_State *L)
+int l_qsort(lua_State *L)
 {
 
     /* Initial checks */
@@ -88,7 +88,7 @@ static int l_qsort(lua_State *L)
     return 3;
 }
 
-static int compare_bsearch(const void *k, const void *v)
+int compare_bsearch(const void *k, const void *v)
 {
 
     item_t *key = (item_t *)k;
@@ -111,7 +111,7 @@ static int compare_bsearch(const void *k, const void *v)
 /*extern void *bsearch (const void *__key, const void *__base,
               size_t __nmemb, size_t __size, __compar_fn_t __compar) */
 
-static int l_bsearch(lua_State *L)
+int l_bsearch(lua_State *L)
 {
 
     /* Initial checks */
@@ -157,7 +157,7 @@ static int l_bsearch(lua_State *L)
     return 1;
 }
 
-static int l_l64a(lua_State *L)
+int l_l64a(lua_State *L)
 {
     lua_Integer n = lua_tointeger(L, -1);
 
@@ -167,7 +167,7 @@ static int l_l64a(lua_State *L)
     return 1;
 }
 
-static int l_a64l(lua_State *L)
+int l_a64l(lua_State *L)
 {
 
     const char *str = lua_tostring(L, -1);
@@ -178,7 +178,7 @@ static int l_a64l(lua_State *L)
     return 1;
 }
 
-static int l_lldiv(lua_State *L)
+int l_lldiv(lua_State *L)
 {
 
     lua_Integer n = lua_tointeger(L, -2);
@@ -192,7 +192,7 @@ static int l_lldiv(lua_State *L)
     return 2;
 }
 
-static int l_strcmp(lua_State *L)
+int l_strcmp(lua_State *L)
 {
 
     const char *s = lua_tostring(L, -2);
@@ -205,7 +205,7 @@ static int l_strcmp(lua_State *L)
     return 1;
 }
 
-static int l_fma(lua_State *L)
+int l_fma(lua_State *L)
 {
 
     lua_Number x = lua_tonumber(L, -3);
@@ -219,10 +219,9 @@ static int l_fma(lua_State *L)
     return 1;
 }
 
-static int l_constants(lua_State *L)
+void math_constants(lua_State *L)
 {
-
-    assert(lua_istable(L, -1) == 1);
+    lua_newtable(L);
 
     lua_pushnumber(L, M_E); /* e */
     lua_setfield(L, -2, "M_E");
@@ -277,10 +276,10 @@ static int l_constants(lua_State *L)
     lua_pushnumber(L, 1.0 - M_SR); /* Bronze ratio */
     lua_setfield(L, -2, "M_BR");
 
-    return 0;
+    lua_setfield(L, -2, "math");
 }
 
-static void pthread_cclosure_dbind(lua_State *L, pthread_t **pthread, void **userdata)
+void pthread_cclosure_dbind(lua_State *L, pthread_t **pthread, void **userdata)
 {
     lua_pushvalue(L, -1);
     lua_call(L, 0, 2);
@@ -291,7 +290,7 @@ static void pthread_cclosure_dbind(lua_State *L, pthread_t **pthread, void **use
     lua_pop(L, 2);
 }
 
-static int l_pthread_created_dbind(lua_State *L)
+int l_pthread_created_dbind(lua_State *L)
 {
     lua_pushvalue(L, lua_upvalueindex(2)); // the pthread.
     lua_pushvalue(L, lua_upvalueindex(3)); // its userdata.
@@ -299,7 +298,7 @@ static int l_pthread_created_dbind(lua_State *L)
     return 2;
 }
 
-static void *pthread_create_callback(void *arg)
+void *pthread_create_callback(void *arg)
 {
     item_t *ud = (item_t *)arg;
 
@@ -318,7 +317,7 @@ static void *pthread_create_callback(void *arg)
     return arg;
 }
 
-static int l_pthread_create_curry(lua_State *L)
+int l_pthread_create_curry(lua_State *L)
 {
     int type;
 
@@ -356,7 +355,7 @@ static int l_pthread_create_curry(lua_State *L)
     return 2;
 }
 
-static int l_pthread_create(lua_State *L)
+int l_pthread_create(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
     luaL_checktype(L, 2, LUA_TNONE); // enforce exactly two arguments.
@@ -381,7 +380,7 @@ static int l_pthread_create(lua_State *L)
     return 1;
 }
 
-static int l_pthread_join(lua_State *L)
+int l_pthread_join(lua_State *L)
 {
     assert(lua_isfunction(L, -1));
 
@@ -427,7 +426,7 @@ static int l_pthread_join(lua_State *L)
     return nret;
 }
 
-static int l_pthread_self(lua_State *L)
+int l_pthread_self(lua_State *L)
 {
     luaL_argcheck(L, lua_isfunction(L, -1), 1, "Expected a function that consumes a pthread.");
 
@@ -443,7 +442,7 @@ static int l_pthread_self(lua_State *L)
     return lua_gettop(L);
 }
 
-static int l_pthread_equal(lua_State *L)
+int l_pthread_equal(lua_State *L)
 {
 
     pthread_t *pthread_a;
@@ -464,7 +463,7 @@ static int l_pthread_equal(lua_State *L)
     return 1;
 }
 
-static int l_pthread_detach(lua_State *L)
+int l_pthread_detach(lua_State *L)
 {
     pthread_t *pthread;
     void *userdata;
@@ -478,7 +477,7 @@ static int l_pthread_detach(lua_State *L)
     return 1;
 }
 
-static int l_pthread_cancel(lua_State *L)
+int l_pthread_cancel(lua_State *L)
 {
     pthread_t *pthread;
     void *userdata;
@@ -492,7 +491,7 @@ static int l_pthread_cancel(lua_State *L)
     return 1;
 }
 
-static int l_pthread_mutex_curry(lua_State *L)
+int l_pthread_mutex_curry(lua_State *L)
 {
 
     luaL_argcheck(L, lua_isfunction(L, -2), 1, "Expected a function that accepts a mutex and its attributes.");
@@ -530,7 +529,7 @@ static int l_pthread_mutex_curry(lua_State *L)
     return nres;
 }
 
-static int l_pthread_mutex_init(lua_State *L)
+int l_pthread_mutex_init(lua_State *L)
 {
 
     int s;
@@ -561,7 +560,7 @@ static int l_pthread_mutex_init(lua_State *L)
     return 1;
 }
 
-static int l_pthread_mutex_lock(lua_State *L)
+int l_pthread_mutex_lock(lua_State *L)
 {
 
     pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, -1);
@@ -573,7 +572,7 @@ static int l_pthread_mutex_lock(lua_State *L)
     return 1;
 }
 
-static int l_pthread_mutex_unlock(lua_State *L)
+int l_pthread_mutex_unlock(lua_State *L)
 {
 
     pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, -1);
@@ -585,7 +584,7 @@ static int l_pthread_mutex_unlock(lua_State *L)
     return 1;
 }
 
-static int l_pthread_cond_signal(lua_State *L)
+int l_pthread_cond_signal(lua_State *L)
 {
 
     pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -1);
@@ -597,7 +596,7 @@ static int l_pthread_cond_signal(lua_State *L)
     return 1;
 }
 
-static int l_pthread_cond_broadcast(lua_State *L)
+int l_pthread_cond_broadcast(lua_State *L)
 {
 
     pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -1);
@@ -609,7 +608,7 @@ static int l_pthread_cond_broadcast(lua_State *L)
     return 1;
 }
 
-static int l_pthread_cond_wait(lua_State *L)
+int l_pthread_cond_wait(lua_State *L)
 {
     pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -2);
     pthread_mutex_t *m = (pthread_mutex_t *)lua_touserdata(L, -1);
@@ -621,7 +620,7 @@ static int l_pthread_cond_wait(lua_State *L)
     return 1;
 }
 
-static int l_pthread_cond_init(lua_State *L)
+int l_pthread_cond_init(lua_State *L)
 {
     pthread_cond_t *cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
 
@@ -633,7 +632,7 @@ static int l_pthread_cond_init(lua_State *L)
     return 2;
 }
 
-static int l_pthread_cond_destroy(lua_State *L)
+int l_pthread_cond_destroy(lua_State *L)
 {
     pthread_cond_t *cond = (pthread_cond_t *)lua_touserdata(L, -1);
 
@@ -646,7 +645,7 @@ static int l_pthread_cond_destroy(lua_State *L)
     return 1;
 }
 
-static const struct luaL_Reg libc[] = {
+const struct luaL_Reg libc[] = {
     {"qsort", l_qsort},
     {"bsearch", l_bsearch},
     {"strcmp", l_strcmp},
@@ -654,7 +653,6 @@ static const struct luaL_Reg libc[] = {
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},
     {"fma", l_fma},
-    {"constants", l_constants},
     {"pthread_create", l_pthread_create},
     {"pthread_join", l_pthread_join},
     {"pthread_self", l_pthread_self},
@@ -672,7 +670,7 @@ static const struct luaL_Reg libc[] = {
     {NULL, NULL} /* sentinel */
 };
 
-static void pthread_constants(lua_State *L)
+void pthread_constants(lua_State *L)
 {
     lua_newtable(L);
 
@@ -701,6 +699,7 @@ int luaopen_liblibc(lua_State *L)
 {
     luaL_newlib(L, libc);
 
+    math_constants(L);
     pthread_constants(L);
 
     return 1;
