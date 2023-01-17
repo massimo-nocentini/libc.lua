@@ -282,12 +282,13 @@ static int l_constants(lua_State *L)
 
 static void pthread_cclosure_dbind(lua_State *L, pthread_t **pthread, void **userdata)
 {
-    lua_call (L, 0, 2);
+    lua_pushvalue(L, -1);
+    lua_call(L, 0, 2);
 
     *pthread = (pthread_t *)lua_touserdata(L, -2);
     *userdata = lua_touserdata(L, -1);
 
-    lua_pop (L, 2);
+    lua_pop(L, 2);
 }
 
 static int l_pthread_created_dbind(lua_State *L)
@@ -312,7 +313,7 @@ static void *pthread_create_callback(void *arg)
 
     ud->idx = retcode == LUA_OK ? nres : -1;
 
-    pthread_exit(arg);
+    // pthread_exit(arg);
 
     return arg;
 }
@@ -325,8 +326,8 @@ static int l_pthread_create_curry(lua_State *L)
 
     pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, lua_upvalueindex(1));
 
-    lua_State *S = lua_newthread(L); // push a new thread.
-    lua_insert(L, 1);                //  and move it to the first position.
+    lua_State *S = lua_newthread(L); // push a new thread,
+    lua_insert(L, 1);                // and move it to the first position.
 
     item_t *ud = (item_t *)malloc(sizeof(item_t));
     ud->L = S;
@@ -387,7 +388,7 @@ static int l_pthread_join(lua_State *L)
     pthread_t *pthread;
     void *userdata;
 
-    pthread_cclosure_dbind (L, &pthread, &userdata);
+    pthread_cclosure_dbind(L, &pthread, &userdata);
 
     void *res;
     int flag = pthread_join(*pthread, &res);
@@ -418,8 +419,8 @@ static int l_pthread_join(lua_State *L)
         {
             lua_xmove(auxstate, L, returned);
             nret += returned;
-            //int rs = lua_resetthread(auxstate);
-            //assert(rs == LUA_OK);
+            int rs = lua_resetthread(auxstate);
+            assert(rs == LUA_OK);
         }
     }
 
@@ -431,11 +432,11 @@ static int l_pthread_self(lua_State *L)
     luaL_argcheck(L, lua_isfunction(L, -1), 1, "Expected a function that consumes a pthread.");
 
     pthread_t pthread = pthread_self();
-    
-    lua_pushnil (L);
+
+    lua_pushnil(L);
     lua_pushlightuserdata(L, &pthread);
-    lua_pushlightuserdata (L, NULL);
-    lua_pushcclosure (L, &l_pthread_created_dbind, 3);
+    lua_pushlightuserdata(L, NULL);
+    lua_pushcclosure(L, &l_pthread_created_dbind, 3);
 
     lua_call(L, 1, LUA_MULTRET);
 
@@ -448,12 +449,13 @@ static int l_pthread_equal(lua_State *L)
     pthread_t *pthread_a;
     void *userdata_a;
 
-    pthread_cclosure_dbind (L, &pthread_a, &userdata_a);
+    pthread_cclosure_dbind(L, &pthread_a, &userdata_a);
 
     pthread_t *pthread_b;
     void *userdata_b;
 
-    pthread_cclosure_dbind (L, &pthread_b, &userdata_b);
+    lua_pushvalue(L, 1);
+    pthread_cclosure_dbind(L, &pthread_b, &userdata_b);
 
     int cmp = pthread_equal(*pthread_a, *pthread_b);
 
@@ -467,7 +469,7 @@ static int l_pthread_detach(lua_State *L)
     pthread_t *pthread;
     void *userdata;
 
-    pthread_cclosure_dbind (L, &pthread, &userdata);
+    pthread_cclosure_dbind(L, &pthread, &userdata);
 
     int retcode = pthread_detach(*pthread);
 
@@ -481,7 +483,7 @@ static int l_pthread_cancel(lua_State *L)
     pthread_t *pthread;
     void *userdata;
 
-    pthread_cclosure_dbind (L, &pthread, &userdata);
+    pthread_cclosure_dbind(L, &pthread, &userdata);
 
     int retcode = pthread_cancel(*pthread);
 
