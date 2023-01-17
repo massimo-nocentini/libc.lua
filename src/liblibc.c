@@ -280,6 +280,24 @@ static int l_constants(lua_State *L)
     return 0;
 }
 
+static void pthread_cclosure_dbind(lua_State *L, pthread_t **pthread, void **userdata)
+{
+    lua_call (L, 0, 2);
+
+    *pthread = (pthread_t *)lua_touserdata(L, -2);
+    *userdata = lua_touserdata(L, -1);
+
+    lua_pop (L, 2);
+}
+
+static int l_pthread_created_dbind(lua_State *L)
+{
+    lua_pushvalue(L, lua_upvalueindex(2)); // the pthread.
+    lua_pushvalue(L, lua_upvalueindex(3)); // its userdata.
+
+    return 2;
+}
+
 static void *pthread_create_callback(void *arg)
 {
     item_t *ud = (item_t *)arg;
@@ -312,17 +330,16 @@ static int l_pthread_create_curry(lua_State *L)
 
     item_t *ud = (item_t *)malloc(sizeof(item_t));
     ud->L = S;
-    ud->idx = nargs;
+    ud->idx = nargs - 1;
 
     pthread_t *t = (pthread_t *)malloc(sizeof(pthread_t));
 
-    lua_pushvalue(L, lua_upvalueindex(2)); // push the function to be run in a pthread.
-    lua_insert(L, 2);                      // and move it as second argument.
-    lua_xmove(L, S, nargs + 1);            // move everything on the newly created coroutine.
+    lua_xmove(L, S, nargs); // move everything on the newly created coroutine.
 
     type = pthread_create(t, attr, &pthread_create_callback, ud);
 
     lua_pushinteger(L, type); // save the flag on the stack before reusing it.
+    lua_insert(L, 1);         // in particular, move it at the first position.
 
     type = pthread_attr_destroy(attr);
     if (type != 0)
@@ -330,17 +347,10 @@ static int l_pthread_create_curry(lua_State *L)
 
     free(attr);
 
-    lua_newtable(L);
-
     lua_pushlightuserdata(L, t);
-    lua_setfield(L, -2, "pthread");
-
     lua_pushlightuserdata(L, ud);
-    lua_setfield(L, -2, "userdata");
 
-    lua_pushvalue(L, 1);
-    lua_setfield(L, -2, "cothread");
-    lua_remove(L, 1);
+    lua_pushcclosure(L, &l_pthread_created_dbind, 3);
 
     return 2;
 }
@@ -365,29 +375,19 @@ static int l_pthread_create(lua_State *L)
 
     lua_pushlightuserdata(L, attr);
 
-    type = lua_getfield(L, 1, "start_function");
-    if (type != LUA_TFUNCTION)
-        luaL_error(L, "The attributes table has to have the `start_function` field.");
-    // leave the function on the stack.
-
-    lua_pushcclosure(L, l_pthread_create_curry, 2); // we also include the function given as second argument.
+    lua_pushcclosure(L, &l_pthread_create_curry, 1);
 
     return 1;
 }
 
 static int l_pthread_join(lua_State *L)
 {
+    assert(lua_isfunction(L, -1));
 
-    assert(lua_istable(L, -1));
-    int table_idx = lua_absindex(L, -1);
+    pthread_t *pthread;
+    void *userdata;
 
-    lua_getfield(L, table_idx, "pthread");
-    pthread_t *pthread = (pthread_t *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-
-    lua_getfield(L, table_idx, "userdata");
-    void *userdata = lua_touserdata(L, -1);
-    lua_pop(L, 1);
+    pthread_cclosure_dbind (L, &pthread, &userdata);
 
     void *res;
     int flag = pthread_join(*pthread, &res);
@@ -410,16 +410,17 @@ static int l_pthread_join(lua_State *L)
         if (returned == -1)
         {
             lua_xmove(auxstate, L, 1);
+            nret++;
+
             lua_error(L);
         }
         else
         {
             lua_xmove(auxstate, L, returned);
-            int rs = lua_resetthread(auxstate);
-            assert(rs == LUA_OK);
+            nret += returned;
+            //int rs = lua_resetthread(auxstate);
+            //assert(rs == LUA_OK);
         }
-
-        nret += returned;
     }
 
     return nret;
@@ -427,38 +428,34 @@ static int l_pthread_join(lua_State *L)
 
 static int l_pthread_self(lua_State *L)
 {
-
     luaL_argcheck(L, lua_isfunction(L, -1), 1, "Expected a function that consumes a pthread.");
 
-    int nargs = lua_gettop(L);
-
-    if (nargs > 1)
-        luaL_argerror(L, 2, "Just one argument is expected.");
-
     pthread_t pthread = pthread_self();
-
-    lua_pushvalue(L, -1); // dup the function to be called.
-    lua_newtable(L);
+    
+    lua_pushnil (L);
     lua_pushlightuserdata(L, &pthread);
-    lua_setfield(L, -2, "pthread");
+    lua_pushlightuserdata (L, NULL);
+    lua_pushcclosure (L, &l_pthread_created_dbind, 3);
 
     lua_call(L, 1, LUA_MULTRET);
 
-    return lua_gettop(L) - nargs;
+    return lua_gettop(L);
 }
 
 static int l_pthread_equal(lua_State *L)
 {
 
-    lua_getfield(L, -2, "pthread");
-    pthread_t *r = (pthread_t *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
+    pthread_t *pthread_a;
+    void *userdata_a;
 
-    lua_getfield(L, -1, "pthread");
-    pthread_t *s = (pthread_t *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
+    pthread_cclosure_dbind (L, &pthread_a, &userdata_a);
 
-    int cmp = pthread_equal(*r, *s);
+    pthread_t *pthread_b;
+    void *userdata_b;
+
+    pthread_cclosure_dbind (L, &pthread_b, &userdata_b);
+
+    int cmp = pthread_equal(*pthread_a, *pthread_b);
 
     lua_pushboolean(L, cmp != 0 ? 1 : 0);
 
@@ -467,12 +464,12 @@ static int l_pthread_equal(lua_State *L)
 
 static int l_pthread_detach(lua_State *L)
 {
+    pthread_t *pthread;
+    void *userdata;
 
-    lua_getfield(L, -1, "pthread");
-    pthread_t *s = (pthread_t *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
+    pthread_cclosure_dbind (L, &pthread, &userdata);
 
-    int retcode = pthread_detach(*s);
+    int retcode = pthread_detach(*pthread);
 
     lua_pushinteger(L, retcode);
 
@@ -481,12 +478,12 @@ static int l_pthread_detach(lua_State *L)
 
 static int l_pthread_cancel(lua_State *L)
 {
+    pthread_t *pthread;
+    void *userdata;
 
-    lua_getfield(L, -1, "pthread");
-    pthread_t *s = (pthread_t *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
+    pthread_cclosure_dbind (L, &pthread, &userdata);
 
-    int retcode = pthread_cancel(*s);
+    int retcode = pthread_cancel(*pthread);
 
     lua_pushinteger(L, retcode);
 
@@ -614,7 +611,7 @@ static int l_pthread_cond_wait(lua_State *L)
 {
     pthread_cond_t *s = (pthread_cond_t *)lua_touserdata(L, -2);
     pthread_mutex_t *m = (pthread_mutex_t *)lua_touserdata(L, -1);
-    
+
     int retcode = pthread_cond_wait(s, m);
 
     lua_pushinteger(L, retcode);
@@ -628,9 +625,9 @@ static int l_pthread_cond_init(lua_State *L)
 
     int s = pthread_cond_init(cond, NULL);
 
-    lua_pushinteger (L, s);
+    lua_pushinteger(L, s);
     lua_pushlightuserdata(L, cond);
-    
+
     return 2;
 }
 
@@ -640,10 +637,10 @@ static int l_pthread_cond_destroy(lua_State *L)
 
     int s = pthread_cond_destroy(cond);
 
-    free (cond);
+    free(cond);
 
-    lua_pushinteger (L, s);
-    
+    lua_pushinteger(L, s);
+
     return 1;
 }
 

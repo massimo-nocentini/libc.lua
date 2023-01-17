@@ -121,8 +121,8 @@ function Test_pthread:test_pthread_create ()
 
 	local pthread = libc.pthread.checked_create
         'pthread_create failed.' 
-        { start_function = function () for i = 1, j do a = a + 1 end end } 
-        ()
+        { } 
+        (function () for i = 1, j do a = a + 1 end end)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -137,18 +137,17 @@ function Test_pthread:test_pthread_sleep ()
     local function get_a () return a end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' 
-        { start_function = lambda.o { get_a , os.execute }} 
-        'sleep 1'
+        { } 
+        (lambda.o { get_a , os.execute }, 'sleep 1')
 
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.' 
-        { start_function = lambda.o {
-                function () while continue do inc() end return a end,
-                --libc.pthread.assert 'pthread_self failed.',
-                --libc.pthread.self,
-                --lambda.K (libc.pthread.detach),
-            }
-        }
-        ()
+        { }
+        (lambda.o {
+            function () while continue do inc() end return a end,
+            --libc.pthread.assert 'pthread_self failed.',
+            --libc.pthread.self,
+            --lambda.K (libc.pthread.detach),
+        })
         
 
     libc.pthread.checked_detach 'Unable to detach the worker thread.' (pthread_print)
@@ -182,18 +181,12 @@ function Test_pthread:test_pthread_sleep_attr ()
     local function get_a () return a end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' 
-        { 
-            setdetachstate = libc.pthread.create_joinable, 
-            start_function = lambda.o { get_a , os.execute } 
-        }
-        'sleep 1'
+        { setdetachstate = libc.pthread.create_joinable, }
+        (lambda.o { get_a , os.execute }, 'sleep 1')
 
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.'
-        { 
-            setdetachstate = libc.pthread.create_detached, 
-            start_function = function () while continue do inc() end return a end 
-        }
-        ()
+        { setdetachstate = libc.pthread.create_detached, }
+        (function () while continue do inc() end return a end)
     
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -215,7 +208,7 @@ function Test_pthread:test_pthread_create_named_function ()
         return a, #b
     end
 
-	local pthread = libc.pthread.checked_create 'pthread_create failed.' { start_function = A } (j, s)
+	local pthread = libc.pthread.checked_create 'pthread_create failed.' { } (A, j, s)
 
     local ra, rs, useless = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -231,7 +224,8 @@ function Test_pthread:test_pthread_self ()
 
 	local a, b, c = libc.pthread.self (
         function (pthread)
-            lu.assertEquals (type (pthread.pthread), 'userdata')
+            local pt, ud = pthread ()
+            lu.assertEquals (type (pt), 'userdata')
             return one, two     -- this is just to check of LUA_MULTRET works.
         end
     )
@@ -250,7 +244,7 @@ function Test_pthread:test_pthread_equal ()
     end
 
     libc.pthread.self (function (main_thread)
-        local pthread = libc.pthread.checked_create 'pthread_create failed.' { start_function = A } (main_thread)
+        local pthread = libc.pthread.checked_create 'pthread_create failed.' { } (A, main_thread)
         lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
     end)
 
@@ -284,8 +278,8 @@ function Test_pthread:test_pthread_coro ()
         return
     end
 
-	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' { start_function = f } (coroA, 10)
-    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' { start_function = f } (coroB, 10)
+	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' { } (f, coroA, 10)
+    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' { } (f, coroB, 10)
     
     libc.pthread.checked_join 'pthread_join failed.' (pthread_one)
     libc.pthread.checked_join 'pthread_join failed.' (pthread_two)
@@ -308,10 +302,10 @@ function Test_pthread:test_pthread_sync_missing ()
     end
 
 	local pthread_a = libc.pthread.checked_create
-        'Failed to create the first worker.' { start_function = doer } ('A', N)
+        'Failed to create the first worker.' { } (doer, 'A', N)
 
     local pthread_b = libc.pthread.checked_create
-        'Failed to create the second worker.' { start_function = doer } ('B', N)
+        'Failed to create the second worker.' { } (doer, 'B', N)
 
     local v = libc.pthread.checked_join 'Failed in joining the first worker.' (pthread_a)
     local w = libc.pthread.checked_join 'Failed in joining the second worker.' (pthread_b)
@@ -352,18 +346,18 @@ function Test_pthread:test_pthread_sync_mutex ()
 
         local pthread_a = libc.pthread.checked_create 
                             'Failed creating the first worker.' 
-                            { setdetachstate = libc.pthread.create_joinable , start_function = doer } 
-                            ('A', N)
+                            { setdetachstate = libc.pthread.create_joinable } 
+                            (doer, 'A', N)
 
         local pthread_b = libc.pthread.checked_create 
                             'Failed creating the second worker.' 
-                            { setdetachstate = libc.pthread.create_joinable , start_function = doer } 
-                            ('B', N)
+                            { setdetachstate = libc.pthread.create_joinable } 
+                            (doer, 'B', N)
 
         local pthread_c = libc.pthread.checked_create
                             'Failed creating the third worker.'
-                            { setdetachstate = libc.pthread.create_joinable , start_function = doer } 
-                            ('C', N)
+                            { setdetachstate = libc.pthread.create_joinable } 
+                            (doer, 'C', N)
 
         local v = libc.pthread.checked_join 'Failed to join the first pthread.'  (pthread_a)
         local w = libc.pthread.checked_join 'Failed to join the second pthread.' (pthread_b)
@@ -375,6 +369,7 @@ function Test_pthread:test_pthread_sync_mutex ()
     end
 
     local with_mutex = lambda.without_gc_do (libc.pthread.mutex_init {}, error)
+    --local with_mutex = libc.pthread.mutex_init {}
     local t = with_mutex (T, error)
 
     lu.assertEquals (t, 3 * N)
@@ -387,8 +382,8 @@ function Test_pthread:test_pthread_mutex_cond ()
 
     local P = libc.pthread.checked_mutex_lock   'pthread_mutex_lock failed.'
     local V = libc.pthread.checked_mutex_unlock 'pthread_mutex_unlock failed.'
-    local S = libc.pthread.checked_cond_signal 'pthread_cond_signal failed.'
-    local W = libc.pthread.checked_cond_wait 'pthread_cond_wait failed.'
+    local S = libc.pthread.checked_cond_signal  'pthread_cond_signal failed.'
+    local W = libc.pthread.checked_cond_wait    'pthread_cond_wait failed.'
 
     local function T (mtx)
 
@@ -416,10 +411,10 @@ function Test_pthread:test_pthread_mutex_cond ()
 
                 local t = libc.pthread.checked_create
                             ('Failed creating worker ' .. i)
-                            { setdetachstate = libc.pthread.create_joinable, start_function = A }
+                            { setdetachstate = libc.pthread.create_joinable }
                 
                 threads [i] = { sleeptime = 1, state = 'alive', idx = i, }
-                threads [i].pthread = t (i)
+                threads [i].pthread = t (A, i)
 
                 numLive = numLive + 1
 
