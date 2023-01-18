@@ -40,12 +40,10 @@ function libc.pthread.assert (msg)
 end
 
 function libc.pthread.checked_create (msg)
-	return function (attr_tbl)
-		return lambda.o { 
-			libc.pthread.assert (msg),
-			libc.pthread.create (attr_tbl),
-		}
-	end
+	return lambda.o { 
+		libc.pthread.assert (msg),
+		libc.pthread.create,
+	}
 end
 
 function libc.pthread.checked_join (msg)
@@ -122,6 +120,20 @@ function libc.pthread.checked_cond_destroy (msg)
 	return lambda.o {
 		libc.pthread.assert (msg),
 		liblibc.pthread_cond_destroy,
+	}
+end
+
+function libc.pthread.checked_attr_init (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_attr_init,
+	}
+end
+
+function libc.pthread.checked_attr_destroy (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_attr_destroy,
 	}
 end
 

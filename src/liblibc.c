@@ -312,21 +312,21 @@ void *pthread_create_callback(void *arg)
 
     ud->idx = retcode == LUA_OK ? nres : -1;
 
-    // pthread_exit(arg);
+    pthread_exit(arg);
 
     return arg;
 }
 
-int l_pthread_create_curry(lua_State *L)
+int l_pthread_create(lua_State *L)
 {
     int type;
 
-    int nargs = lua_gettop(L);
+    int nargs = lua_gettop(L) - 1; // the first argument is the thread's attributes.
 
-    pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, lua_upvalueindex(1));
+    pthread_attr_t *attr = lua_isnil(L, 1) ? NULL : (pthread_attr_t *)lua_touserdata(L, 1);
 
     lua_State *S = lua_newthread(L); // push a new thread,
-    lua_insert(L, 1);                // and move it to the first position.
+    lua_insert(L, 2);                // and move it to the first position.
 
     item_t *ud = (item_t *)malloc(sizeof(item_t));
     ud->L = S;
@@ -339,13 +339,7 @@ int l_pthread_create_curry(lua_State *L)
     type = pthread_create(t, attr, &pthread_create_callback, ud);
 
     lua_pushinteger(L, type); // save the flag on the stack before reusing it.
-    lua_insert(L, 1);         // in particular, move it at the first position.
-
-    type = pthread_attr_destroy(attr);
-    if (type != 0)
-        luaL_error(L, "pthread_attr_destroy failed.");
-
-    free(attr);
+    lua_insert(L, 2);         // in particular, move it at the first position.
 
     lua_pushlightuserdata(L, t);
     lua_pushlightuserdata(L, ud);
@@ -355,10 +349,9 @@ int l_pthread_create_curry(lua_State *L)
     return 2;
 }
 
-int l_pthread_create(lua_State *L)
+int l_pthread_attr_init(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
-    luaL_checktype(L, 2, LUA_TNONE); // enforce exactly two arguments.
 
     int type;
 
@@ -368,14 +361,34 @@ int l_pthread_create(lua_State *L)
     if (type != 0)
         luaL_error(L, "pthread_attr_init failed.");
 
-    type = lua_getfield(L, 1, "setdetachstate");
-    if (type == LUA_TNUMBER)
-        pthread_attr_setdetachstate(attr, lua_tointeger(L, -1));
-    lua_pop(L, 1);
-
+    lua_pushinteger(L, type);
     lua_pushlightuserdata(L, attr);
 
-    lua_pushcclosure(L, &l_pthread_create_curry, 1);
+    type = lua_getfield(L, 1, "setdetachstate");
+    if (type == LUA_TNUMBER)
+    {
+        type = pthread_attr_setdetachstate(attr, lua_tointeger(L, -1));
+        if (type != 0)
+            luaL_error(L, "pthread_attr_setdetachstate failed.");
+    }
+    lua_pop(L, 1);
+
+    return 2;
+}
+
+int l_pthread_attr_destroy(lua_State *L)
+{
+    int type;
+
+    pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, 1);
+
+    type = pthread_attr_destroy(attr);
+    if (type != 0)
+        luaL_error(L, "pthread_attr_destroy failed.");
+
+    free(attr);
+
+    lua_pushinteger(L, type);
 
     return 1;
 }
@@ -653,6 +666,8 @@ const struct luaL_Reg libc[] = {
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},
     {"fma", l_fma},
+    {"pthread_attr_init", l_pthread_attr_init},
+    {"pthread_attr_destroy", l_pthread_attr_destroy},
     {"pthread_create", l_pthread_create},
     {"pthread_join", l_pthread_join},
     {"pthread_self", l_pthread_self},

@@ -121,8 +121,7 @@ function Test_pthread:test_pthread_create ()
 
 	local pthread = libc.pthread.checked_create
         'pthread_create failed.' 
-        { } 
-        (function () for i = 1, j do a = a + 1 end end)
+        (nil, function () for i = 1, j do a = a + 1 end end)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -137,12 +136,10 @@ function Test_pthread:test_pthread_sleep ()
     local function get_a () return a end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' 
-        { } 
-        (lambda.o { get_a , os.execute }, 'sleep 1')
+        (nil, lambda.o { get_a , os.execute }, 'sleep 1')
 
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.' 
-        { }
-        (lambda.o {
+        (nil, lambda.o {
             function () while continue do inc() end return a end,
             --libc.pthread.assert 'pthread_self failed.',
             --libc.pthread.self,
@@ -181,12 +178,13 @@ function Test_pthread:test_pthread_sleep_attr ()
     local function get_a () return a end
 
     local pthread = libc.pthread.checked_create 'pthread_create failed.' 
-        { setdetachstate = libc.pthread.create_joinable, }
-        (lambda.o { get_a , os.execute }, 'sleep 1')
+        (nil, lambda.o { get_a , os.execute }, 'sleep 1')
 
+    local attr = libc.pthread.checked_attr_init 'pthread_attr_init failed.' 
+                    { setdetachstate = libc.pthread.create_detached, }
     local pthread_print = libc.pthread.checked_create 'pthread_create failed.'
-        { setdetachstate = libc.pthread.create_detached, }
-        (function () while continue do inc() end return a end)
+                            (attr, function () while continue do inc() end return a end)
+    libc.pthread.checked_attr_destroy 'pthread_attr_destroy failed.' (attr)
     
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -208,7 +206,7 @@ function Test_pthread:test_pthread_create_named_function ()
         return a, #b
     end
 
-	local pthread = libc.pthread.checked_create 'pthread_create failed.' { } (A, j, s)
+	local pthread = libc.pthread.checked_create 'pthread_create failed.' (nil, A, j, s)
 
     local ra, rs, useless = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
@@ -244,7 +242,7 @@ function Test_pthread:test_pthread_equal ()
     end
 
     libc.pthread.self (function (main_thread)
-        local pthread = libc.pthread.checked_create 'pthread_create failed.' { } (A, main_thread)
+        local pthread = libc.pthread.checked_create 'pthread_create failed.' (nil, A, main_thread)
         lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
     end)
 
@@ -278,8 +276,8 @@ function Test_pthread:test_pthread_coro ()
         return
     end
 
-	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' { } (f, coroA, 10)
-    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' { } (f, coroB, 10)
+	local pthread_one = libc.pthread.checked_create 'pthread_create failed.' (nil, f, coroA, 10)
+    local pthread_two = libc.pthread.checked_create 'pthread_create failed.' (nil, f, coroB, 10)
     
     libc.pthread.checked_join 'pthread_join failed.' (pthread_one)
     libc.pthread.checked_join 'pthread_join failed.' (pthread_two)
@@ -302,10 +300,10 @@ function Test_pthread:test_pthread_sync_missing ()
     end
 
 	local pthread_a = libc.pthread.checked_create
-        'Failed to create the first worker.' { } (doer, 'A', N)
+        'Failed to create the first worker.' (nil, doer, 'A', N)
 
     local pthread_b = libc.pthread.checked_create
-        'Failed to create the second worker.' { } (doer, 'B', N)
+        'Failed to create the second worker.' (nil, doer, 'B', N)
 
     local v = libc.pthread.checked_join 'Failed in joining the first worker.' (pthread_a)
     local w = libc.pthread.checked_join 'Failed in joining the second worker.' (pthread_b)
@@ -346,18 +344,15 @@ function Test_pthread:test_pthread_sync_mutex ()
 
         local pthread_a = libc.pthread.checked_create 
                             'Failed creating the first worker.' 
-                            { setdetachstate = libc.pthread.create_joinable } 
-                            (doer, 'A', N)
+                            (nil, doer, 'A', N)
 
         local pthread_b = libc.pthread.checked_create 
                             'Failed creating the second worker.' 
-                            { setdetachstate = libc.pthread.create_joinable } 
-                            (doer, 'B', N)
+                            (nil, doer, 'B', N)
 
         local pthread_c = libc.pthread.checked_create
                             'Failed creating the third worker.'
-                            { setdetachstate = libc.pthread.create_joinable } 
-                            (doer, 'C', N)
+                            (nil, doer, 'C', N)
 
         local v = libc.pthread.checked_join 'Failed to join the first pthread.'  (pthread_a)
         local w = libc.pthread.checked_join 'Failed to join the second pthread.' (pthread_b)
@@ -395,10 +390,9 @@ function Test_pthread:test_pthread_mutex_cond ()
 
                 print (string.format ('pthread %d terminated.', idx))
 
-                threads [idx].state = 'terminated'
-
                 P (mtx) 
                 
+                threads [idx].state = 'terminated'
                 numUnjoined = numUnjoined + 1
                 
                 V (mtx)
@@ -409,12 +403,10 @@ function Test_pthread:test_pthread_mutex_cond ()
 
             for i = 1, totThreads do
 
-                local t = libc.pthread.checked_create
-                            ('Failed creating worker ' .. i)
-                            { setdetachstate = libc.pthread.create_joinable }
+                local t = libc.pthread.checked_create ('Failed creating worker ' .. i)
                 
                 threads [i] = { sleeptime = 1, state = 'alive', idx = i, }
-                threads [i].pthread = t (A, i)
+                threads [i].pthread = t (nil, A, i)
 
                 numLive = numLive + 1
 
