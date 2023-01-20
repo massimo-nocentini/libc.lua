@@ -363,9 +363,16 @@ function Test_pthread:test_pthread_sync_mutex ()
         return tot
     end
 
-    local with_mutex = lambda.without_gc_do (libc.pthread.mutex_init {}, error)
-    --local with_mutex = libc.pthread.mutex_init {}
-    local t = with_mutex (T, error)
+    local D = lambda.without_gc (
+        function ()
+            local mtx = libc.pthread.checked_mutex_init 'pthread_mutex_init failed.' ()
+            local _, t = pcall (T, mtx)
+            libc.pthread.checked_mutex_destroy 'pthread_mutex_destroy failed.' (mtx)
+            return t
+        end
+    )
+    
+    local t = D ()
 
     lu.assertEquals (t, 3 * N)
     
@@ -384,7 +391,7 @@ function Test_pthread:test_pthread_mutex_cond ()
 
         local function D (threadDied)
 
-            local function A (idx) 
+            local function A (idx)
             
                 os.execute ('sleep ' .. threads [idx].sleeptime)
 
@@ -424,7 +431,7 @@ function Test_pthread:test_pthread_mutex_cond ()
 
                     if t.state == 'terminated' then
 
-                        libc.pthread.join (t.pthread)
+                        libc.pthread.checked_join ('Failed to join thread ' .. t.idx) (t.pthread)
                         
                         t.state = 'joined'
                         
@@ -445,8 +452,16 @@ function Test_pthread:test_pthread_mutex_cond ()
 
     end
 
-    local with_mutex = lambda.without_gc_do (libc.pthread.mutex_init {}, error)
-    local t = with_mutex (T, error)
+    local D = lambda.without_gc (
+        function ()
+            local mtx = libc.pthread.checked_mutex_init 'pthread_mutex_init failed.' ()
+            local _, t = pcall (T, mtx)
+            libc.pthread.checked_mutex_destroy 'pthread_mutex_destroy failed.' (mtx)
+            return t
+        end
+    )
+    
+    local t = D ()
     
 end
 

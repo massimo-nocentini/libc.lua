@@ -137,6 +137,34 @@ function libc.pthread.checked_attr_destroy (msg)
 	}
 end
 
+function libc.pthread.checked_mutexattr_init (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_mutexattr_init,
+	}
+end
+
+function libc.pthread.checked_mutexattr_destroy (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_mutexattr_destroy,
+	}
+end
+
+function libc.pthread.checked_mutex_init (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_mutex_init,
+	}
+end
+
+function libc.pthread.checked_mutex_destroy (msg)
+	return lambda.o {
+		libc.pthread.assert (msg),
+		liblibc.pthread_mutex_destroy,
+	}
+end
+
 function libc.pthread.with_cond (f, h)
 
 	h = h or error

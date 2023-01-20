@@ -383,8 +383,6 @@ int l_pthread_attr_destroy(lua_State *L)
     pthread_attr_t *attr = (pthread_attr_t *)lua_touserdata(L, 1);
 
     type = pthread_attr_destroy(attr);
-    if (type != 0)
-        luaL_error(L, "pthread_attr_destroy failed.");
 
     free(attr);
 
@@ -504,71 +502,72 @@ int l_pthread_cancel(lua_State *L)
     return 1;
 }
 
-int l_pthread_mutex_curry(lua_State *L)
-{
-
-    luaL_argcheck(L, lua_isfunction(L, -2), 1, "Expected a function that accepts a mutex and its attributes.");
-    luaL_argcheck(L, lua_isfunction(L, -1), 2, "Expected a function that handles the error in case.");
-
-    int nargs = lua_gettop(L); // including the function to be called in the C callback.
-    assert(nargs == 2);
-
-    pthread_mutex_t *mutex = (pthread_mutex_t *)lua_touserdata(L, lua_upvalueindex(1));
-    pthread_mutexattr_t *attr = (pthread_mutexattr_t *)lua_touserdata(L, lua_upvalueindex(2));
-
-    lua_pushvalue(L, -2); // duplicate the worker function.
-    lua_pushlightuserdata(L, mutex);
-    lua_pushlightuserdata(L, attr);
-
-    int res = lua_pcall(L, 2, LUA_MULTRET, 0);
-
-    pthread_mutex_destroy(mutex);
-    pthread_mutexattr_destroy(attr);
-
-    free(mutex);
-    free(attr);
-
-    if (res != LUA_OK)
-    {
-        lua_pushvalue(L, -2); // duplicate the error handler.
-        lua_pushvalue(L, -2); // duplicate the error object.
-        lua_remove(L, -3);    // remove the duplicated error object.
-
-        lua_call(L, 1, LUA_MULTRET);
-    }
-
-    int nres = lua_gettop(L) - nargs;
-
-    return nres;
-}
-
 int l_pthread_mutex_init(lua_State *L)
 {
+    int s;
 
+    pthread_mutexattr_t *attr = lua_islightuserdata (L, 1) ? (pthread_mutexattr_t *) lua_touserdata (L, 1) : NULL;
+    pthread_mutex_t *mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+
+    s = pthread_mutex_init(mutex, attr);
+
+    lua_pushinteger(L, s);
+    lua_pushlightuserdata(L, mutex);
+    
+    return 2;
+}
+
+int l_pthread_mutex_destroy(lua_State *L)
+{
+    int type;
+
+    pthread_mutex_t *attr = (pthread_mutex_t *)lua_touserdata(L, 1);
+
+    type = pthread_mutex_destroy(attr);
+
+    free(attr);
+
+    lua_pushinteger(L, type);
+
+    return 1;
+}
+
+int l_pthread_mutexattr_init(lua_State *L)
+{
     int s;
 
     luaL_argcheck(L, lua_istable(L, -1), 1, "Expected a table of mutex attributes.");
 
-    pthread_mutex_t *mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
     pthread_mutexattr_t *attr = (pthread_mutexattr_t *)malloc(sizeof(pthread_mutexattr_t));
 
     s = pthread_mutexattr_init(attr);
-    if (s != 0)
-        luaL_error(L, "pthread_mutexattr_init failed.");
+
+    lua_pushinteger(L, s);
+    lua_pushlightuserdata(L, attr);
 
     s = lua_getfield(L, -1, "settype");
     if (s == LUA_TNUMBER)
-        pthread_mutexattr_settype(attr, lua_tointeger(L, -1));
+    {
+        s = pthread_mutexattr_settype(attr, lua_tointeger(L, -1));
+        if (s != 0)
+            luaL_error(L, "pthread_mutexattr_settype failed.");
+    }
     lua_pop(L, 1);
 
-    s = pthread_mutex_init(mutex, attr);
-    if (s != 0)
-        luaL_error(L, "pthread_mutex_init failed.");
+    return 2;
+}
 
-    lua_pushlightuserdata(L, mutex);
-    lua_pushlightuserdata(L, attr);
+int l_pthread_mutexattr_destroy(lua_State *L)
+{
+    int type;
 
-    lua_pushcclosure(L, &l_pthread_mutex_curry, 2);
+    pthread_mutexattr_t *attr = (pthread_mutexattr_t *)lua_touserdata(L, 1);
+
+    type = pthread_mutexattr_destroy(attr);
+
+    free(attr);
+
+    lua_pushinteger(L, type);
 
     return 1;
 }
@@ -674,7 +673,10 @@ const struct luaL_Reg libc[] = {
     {"pthread_equal", l_pthread_equal},
     {"pthread_detach", l_pthread_detach},
     {"pthread_cancel", l_pthread_cancel},
+    {"pthread_mutexattr_init", l_pthread_mutexattr_init},
+    {"pthread_mutexattr_destroy", l_pthread_mutexattr_destroy},
     {"pthread_mutex_init", l_pthread_mutex_init},
+    {"pthread_mutex_destroy", l_pthread_mutex_destroy},
     {"pthread_mutex_lock", l_pthread_mutex_lock},
     {"pthread_mutex_unlock", l_pthread_mutex_unlock},
     {"pthread_cond_init", l_pthread_cond_init},
