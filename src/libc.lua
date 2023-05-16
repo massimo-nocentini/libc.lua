@@ -12,6 +12,7 @@ libc.stdlib = {
 
 libc.string = {
 	strcmp = liblibc.strcmp,
+	strtok = liblibc.strtok,
 }
 
 libc.pthread = {

@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 #include <lua.h>
@@ -506,14 +507,14 @@ int l_pthread_mutex_init(lua_State *L)
 {
     int s;
 
-    pthread_mutexattr_t *attr = lua_islightuserdata (L, 1) ? (pthread_mutexattr_t *) lua_touserdata (L, 1) : NULL;
+    pthread_mutexattr_t *attr = lua_islightuserdata(L, 1) ? (pthread_mutexattr_t *)lua_touserdata(L, 1) : NULL;
     pthread_mutex_t *mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 
     s = pthread_mutex_init(mutex, attr);
 
     lua_pushinteger(L, s);
     lua_pushlightuserdata(L, mutex);
-    
+
     return 2;
 }
 
@@ -657,10 +658,47 @@ int l_pthread_cond_destroy(lua_State *L)
     return 1;
 }
 
+int l_strtok(lua_State *L)
+{
+    const char *orig = lua_tostring(L, 1);
+    const char *delimiters = lua_tostring(L, 2);
+
+    char *str = (char *)malloc(sizeof(char) * strlen(orig) + 1);
+
+    char *ptr = orig;
+    
+    strcpy(str, orig);
+
+    char *pch;
+
+    int lines;
+
+    lua_newtable(L);
+
+    pch = strtok(str, delimiters);
+
+    for (lines = 1; pch != NULL; lines++)
+    {
+        lua_pushstring(L, pch);
+        lua_seti(L, -2, lines);
+
+        pch = strtok(NULL, delimiters);
+    }
+
+    if (lines == 1)
+    {
+        lua_pushstring(L, str);
+        lua_seti(L, -2, lines);
+    }
+
+    return 1;
+}
+
 const struct luaL_Reg libc[] = {
     {"qsort", l_qsort},
     {"bsearch", l_bsearch},
     {"strcmp", l_strcmp},
+    {"strtok", l_strtok},
     {"l64a", l_l64a},
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},
