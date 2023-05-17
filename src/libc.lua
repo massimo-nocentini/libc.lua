@@ -27,6 +27,8 @@ function string.lines (str, include)
 	return libc.string.strtok_r (str, '\n', include)
 end
 
+string.tokens = libc.string.strtok_r
+
 libc.pthread = {
 	create = liblibc.pthread_create,
 	join = liblibc.pthread_join,
