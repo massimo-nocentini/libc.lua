@@ -658,31 +658,46 @@ int l_pthread_cond_destroy(lua_State *L)
     return 1;
 }
 
-int l_strtok(lua_State *L)
+int l_strtok_r(lua_State *L)
 {
     const char *orig = lua_tostring(L, 1);
     const char *delimiters = lua_tostring(L, 2);
+    bool include_empty_lines = lua_toboolean(L, 3);
 
     char *str = (char *)malloc(sizeof(char) * strlen(orig) + 1);
 
-    char *ptr = orig;
-    
-    strcpy(str, orig);
+    char *del = strcpy(str, orig);
 
-    char *pch;
+    char *pch, *ptr; // auxiliary pointers for tokens and followers.
 
     int lines;
 
     lua_newtable(L);
 
-    pch = strtok(str, delimiters);
-
-    for (lines = 1; pch != NULL; lines++)
+    for (lines = 1, ptr = str; pch = strtok_r(str, delimiters, &str); lines++)
     {
+        while (include_empty_lines && ptr != pch)
+        {
+            lua_pushstring(L, "");
+            lua_seti(L, -2, lines);
+
+            lines++;
+            ptr += 1;
+        }
+
+        ptr = str;
+
         lua_pushstring(L, pch);
         lua_seti(L, -2, lines);
+    }
 
-        pch = strtok(NULL, delimiters);
+    while (include_empty_lines && *ptr != '\0')
+    {
+        lua_pushstring(L, "");
+        lua_seti(L, -2, lines);
+
+        lines++;
+        ptr += 1;
     }
 
     if (lines == 1)
@@ -691,6 +706,8 @@ int l_strtok(lua_State *L)
         lua_seti(L, -2, lines);
     }
 
+    free(del);
+
     return 1;
 }
 
@@ -698,7 +715,7 @@ const struct luaL_Reg libc[] = {
     {"qsort", l_qsort},
     {"bsearch", l_bsearch},
     {"strcmp", l_strcmp},
-    {"strtok", l_strtok},
+    {"strtok_r", l_strtok_r},
     {"l64a", l_l64a},
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},

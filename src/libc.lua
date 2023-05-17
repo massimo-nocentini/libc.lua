@@ -12,8 +12,20 @@ libc.stdlib = {
 
 libc.string = {
 	strcmp = liblibc.strcmp,
-	strtok = liblibc.strtok,
+	strtok_r = function (str, delims, insert_empty) 
+		
+		delims = delims or ''
+		
+		if insert_empty == nil then insert_empty = false end -- because this is the normal behavior of the C function.
+
+		return liblibc.strtok_r (str, delims, insert_empty) 
+	end,
 }
+
+function string.lines (str, include)
+	if include == nil then include = false end
+	return libc.string.strtok_r (str, '\n', include)
+end
 
 libc.pthread = {
 	create = liblibc.pthread_create,
