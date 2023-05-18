@@ -1,5 +1,6 @@
 
 local libc = require 'libc'
+local lambda = require 'operator'
 
 print [[
     hello
@@ -28,10 +29,7 @@ lines = libc.string.strtok_r ('hello world', '\r\n,')
 
 for k, v in pairs (string.lines 'hello world') do print (k, v) end
 
-local rows = { }
-for k, v in pairs (str:lines (true)) do 
-    table.insert (rows, (rows[#rows] or 0) + #v + 1)
-end
+local rows = table.scan (str:lines (true), function (acc, l) return 1 + acc + #l end, 0)
 
 for k, v in ipairs (rows) do print (v) end
 
