@@ -35,6 +35,12 @@ end
 
 for k, v in ipairs (rows) do print (v) end
 
+local function I (row, col)
+    return string.sub (str, rows[row] + col)
+end
+
+print ('indexed ', I (2, 4)  )
+
 print (#rows, #str)
 
-for k, v in pairs (string.tokens ('hello, world', ',')) do print (k, v) end
+for k, v in pairs (string.tokenize ('hello, world', ',')) do print (k, v) end

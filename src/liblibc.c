@@ -668,13 +668,15 @@ int l_strtok_r(lua_State *L)
 
     char *del = strcpy(str, orig);
 
-    char *pch, *ptr; // auxiliary pointers for tokens and followers.
+    // auxiliary pointers for tokens and followers.
+    char *pch = NULL;
+    char *ptr = str;
 
-    int lines;
+    int lines = 1;
 
-    lua_newtable(L);
+    lua_newtable(L); // for tokens.
 
-    for (lines = 1, ptr = str; pch = strtok_r(str, delimiters, &str); lines++)
+    while (pch = strtok_r(str, delimiters, &str))
     {
         while (include_empty_lines && ptr != pch)
         {
@@ -685,10 +687,11 @@ int l_strtok_r(lua_State *L)
             ptr += 1;
         }
 
-        ptr = str;
-
         lua_pushstring(L, pch);
         lua_seti(L, -2, lines);
+
+        lines++;
+        ptr = str;
     }
 
     while (include_empty_lines && *ptr != '\0')
