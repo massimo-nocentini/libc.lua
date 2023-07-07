@@ -1,6 +1,6 @@
 
 linux:
-	gcc -O2 -std=gnu11 -fPIC -Wall -s -shared -o liblibc.so liblibc.c -llua -lpthread
+	gcc -O2 -std=gnu11 -fPIC -Wall -shared -o liblibc.so liblibc.c -llua -lpthread
 
 macos:
 	cc -O2 -std=c11 -fPIC -Wall -dynamiclib -o liblibc.dylib liblibc.c -llua -lpthread
