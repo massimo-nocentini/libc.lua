@@ -144,8 +144,6 @@ int l_bsearch(lua_State *L)
 
     item_t *found = (item_t *)bsearch(&key, permutation, nel, sizeof(item_t), compare_bsearch);
 
-    free(permutation);
-
     if (found != NULL)
     {
         lua_geti(L, table_absidx, found->idx);
@@ -154,6 +152,8 @@ int l_bsearch(lua_State *L)
     {
         lua_pushnil(L);
     }
+
+    free(permutation);
 
     return 1;
 }
@@ -676,7 +676,7 @@ int l_strtok_r(lua_State *L)
 
     lua_newtable(L); // for tokens.
 
-    while (pch = strtok_r(str, delimiters, &str))
+    while ((pch = strtok_r(str, delimiters, &str)) != NULL)
     {
         while (include_empty_lines && ptr != pch)
         {
