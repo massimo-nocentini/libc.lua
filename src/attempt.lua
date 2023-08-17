@@ -13,7 +13,7 @@ local lambda = require 'operator'
 
 local N = 1000000
 
-collectgarbage 'stop'
+-- collectgarbage 'stop'
 
 local function T (mtx) 
 
@@ -56,4 +56,4 @@ local t = libc.pthread.mutex_init {} (T, error)
 
 print (t)
 
-collectgarbage 'restart'
+-- collectgarbage 'restart'
