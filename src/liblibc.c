@@ -2,7 +2,8 @@
 /*
     This is a glue c file for importing delta client c functions into Lua workflow.
 */
-
+#define __USE_XOPEN
+// #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -209,9 +210,9 @@ int l_strcmp(lua_State *L)
 int l_fma(lua_State *L)
 {
 
-    lua_Number x = lua_tonumber(L, -3);
-    lua_Number y = lua_tonumber(L, -2);
-    lua_Number z = lua_tonumber(L, -1);
+    lua_Number x = lua_tonumber(L, 1);
+    lua_Number y = lua_tonumber(L, 2);
+    lua_Number z = lua_tonumber(L, 3);
 
     lua_Number r = fma(x, y, z);
 

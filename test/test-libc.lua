@@ -1,67 +1,54 @@
 
-local lu = require 'luaunit'
+local unittest = require 'unittest'
 local libc = require 'libc'
 local lambda = require 'operator'
 
-Test_base64 = {}
+local tests = {}
 
-function Test_base64:test_l64a ()
-	lu.assertEquals (libc.stdlib.l64a(32), 'U')
-	lu.assertEquals (libc.stdlib.l64a(23948792), 'srKP/')
-	lu.assertEquals (libc.stdlib.l64a(0), '')
+function tests:test_l64a ()
+	unittest.assert.equals '' 'U' (libc.stdlib.l64a(32))
+	unittest.assert.equals '' 'srKP/' (libc.stdlib.l64a(23948792))
+	unittest.assert.equals '' '' (libc.stdlib.l64a(0))
 end
 
-function Test_base64:test_a64l ()
-    lu.assertEquals (libc.stdlib.a64l('U'), 32)
-    lu.assertEquals (libc.stdlib.a64l('srKP/'), 23948792)
+function tests:test_a64l ()
+    unittest.assert.equals '' (32) (libc.stdlib.a64l('U'))
+    unittest.assert.equals '' (23948792) (libc.stdlib.a64l('srKP/'))
 end
 
-function Test_base64:test_a64l_l64a_identity ()
-    lu.assertEquals (libc.stdlib.a64l(libc.stdlib.l64a(32)), 32)
-    lu.assertEquals (libc.stdlib.a64l(libc.stdlib.l64a(23948792)), 23948792)
+function tests:test_a64l_l64a_identity ()
+    local v
+
+    v = 32; unittest.assert.equals '' (v) (libc.stdlib.a64l(libc.stdlib.l64a(v)))
+    v = 23948792; unittest.assert.equals '' (v) (libc.stdlib.a64l(libc.stdlib.l64a(v)))
 end
 
---------------------------------------------------------------------------------
-
-Test_lldiv = {}
-
-function Test_lldiv:test_minus5_3 ()
-    local q, r = libc.stdlib.lldiv(-5, 3)
-    lu.assertEquals (q, -1)
-    lu.assertEquals (r, -2)
+function tests:test_minus5_3 ()
+    unittest.assert.equals '' (-1, -2) (libc.stdlib.lldiv(-5, 3))
 end
 
-function Test_lldiv:test_4897294869528760942_759843276952576 ()
+function tests:test_4897294869528760942_759843276952576 ()
     local m, n = 4897294869528760942, 759843276952576
     local q, r = libc.stdlib.lldiv(m, n)
-    lu.assertEquals (q, 6445)
-    lu.assertEquals (r, 104949569408622)
-    lu.assertEquals (q * n + r, m)
+    unittest.assert.equals '' (6445, 104949569408622) (q, r)
+    unittest.assert.equals '' (m) (q * n + r)
 end
 
---------------------------------------------------------------------------------
-
-Test_bsearch = {}
-
-function Test_bsearch:test_lteqgtcmp ()
+function tests:test_lteqgtcmp ()
     local values, key = { 50, 20, 60, 40, 10, 30 }, 40
     libc.stdlib.qsort(values)
     local found = libc.stdlib.bsearch(values, key)
-    lu.assertEquals (found, key)
+    unittest.assert.equals '' (key) (found)
 end
 
-function Test_bsearch:test_strcmp ()
+function tests:test_strcmp ()
     local values, key = {"some","example","strings","here"}, "example"
     libc.stdlib.qsort(values, libc.string.strcmp)
     local found = libc.stdlib.bsearch(values, key, libc.string.strcmp)
-    lu.assertEquals (found, key)
+    unittest.assert.equals '' (key) (found)
 end
 
---------------------------------------------------------------------------------
-
-Test_qsort = {}
-
-function Test_qsort:test_1e6 ()
+function tests:test_1e6 ()
 	
 	local tbl = {}
 	local n = 1000000 
@@ -75,41 +62,35 @@ function Test_qsort:test_1e6 ()
 
 	table.sort(tbl)
 
-	lu.assertEquals(sorted, tbl)
-	lu.assertEquals(permuted, tbl)
+    for i = 1, n do
+        unittest.assert.equals '' (tbl[i]) (sorted[i])
+        unittest.assert.equals '' (tbl[i]) (permuted[i])
+    end
 end
 
---------------------------------------------------------------------------------
-Test_fma = {}
-
-function Test_fma:test_10_20_30 ()
+function tests:test_10_20_30 ()
 	
 	local x, y, z = 10.0, 20.0, 30.0
-	lu.assertEquals(libc.math.fma(x, y, z), x * y + z)
+	unittest.assert.equals '' (x * y + z) (libc.math.fma(x, y, z))
 end
 
-
-function Test_fma:test_a_b_minus ()
+function tests:test_a_b_minus ()
 	
 	local x, y = 1.0, 0.000001
     local high = x * y
     local low = libc.math.fma(x, y, -high)
-	lu.assertEquals(high + low, x * y)
-    lu.assertEquals(libc.math.fma (x, y, 0.0), x * y)
+	unittest.assert.equals '' (x * y) (high + low)
+    unittest.assert.equals '' (x * y) (libc.math.fma (x, y, 0.0))
 end
 
---------------------------------------------------------------------------------
-
-Test_constants = {}
-
-function Test_constants:test_gr ()
+function tests:test_gr ()
 	
-	lu.assertEquals(libc.math.M_GR, 1.618033988749894848204586834365638117720309179805762)
+	unittest.assert.equals '' (1.618033988749894848204586834365638117720309179805762) (libc.math.M_GR)
 end
 
-function Test_constants:test_pi ()
+function tests:test_pi ()
 	
-    lu.assertEquals(libc.math.M_PI, 3.14159265358979323846)
+    unittest.assert.equals '' (3.14159265358979323846) (libc.math.M_PI)
 end
 
 --------------------------------------------------------------------------------
@@ -125,8 +106,8 @@ function Test_pthread:test_pthread_create ()
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
-    lu.assertEquals (a, j)
-    lu.assertNil (v)
+    unittest.assert.equals '' (a, j)
+    unittest.assertNil (v)
 end
 
 function Test_pthread:test_pthread_sleep ()
@@ -149,21 +130,21 @@ function Test_pthread:test_pthread_sleep ()
 
     libc.pthread.checked_detach 'Unable to detach the worker thread.' (pthread_print)
     
-    --lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
+    --unittest.assertFalse (libc.pthread.attribute (pthread).detachstate)
 
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
-    --lu.assertFalse (libc.pthread.attribute (pthread).detachstate)
+    --unittest.assertFalse (libc.pthread.attribute (pthread).detachstate)
 
-    lu.assertTrue (v <= a)
+    unittest.assertTrue (v <= a)
 
-    --lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
+    --unittest.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
 
     local retcode = libc.pthread.join (pthread_print)
 
-    --lu.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
+    --unittest.assertFalse (libc.pthread.attribute (pthread_print).detachstate)
 
-    lu.assertEquals (retcode, 22)
+    unittest.assert.equals '' (retcode, 22)
 
     --libc.pthread.checked_cancel 'Unable to cancel the worker thread.' (pthread_print)
 
@@ -188,11 +169,11 @@ function Test_pthread:test_pthread_sleep_attr ()
     
     local v = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
-    lu.assertTrue (v <= a)
+    unittest.assertTrue (v <= a)
 
     local retcode = libc.pthread.join (pthread_print)
 
-    lu.assertEquals (retcode, 22)
+    unittest.assert.equals '' (retcode, 22)
 
     continue = false    -- this is necessary to stop the worker thread, otherwise a segmentation fault occurs.
 end
@@ -210,10 +191,10 @@ function Test_pthread:test_pthread_create_named_function ()
 
     local ra, rs, useless = libc.pthread.checked_join 'pthread_join failed.' (pthread)
 
-    lu.assertEquals (a, j)
-    lu.assertEquals (a, ra)
-    lu.assertEquals (#s, rs)
-    lu.assertNil (useless)
+    unittest.assert.equals '' (a, j)
+    unittest.assert.equals '' (a, ra)
+    unittest.assert.equals '' (#s, rs)
+    unittest.assertNil (useless)
 end
 
 function Test_pthread:test_pthread_self ()
@@ -223,14 +204,14 @@ function Test_pthread:test_pthread_self ()
 	local a, b, c = libc.pthread.self (
         function (pthread)
             local pt, ud = pthread ()
-            lu.assertEquals (type (pt), 'userdata')
+            unittest.assert.equals '' (type (pt), 'userdata')
             return one, two     -- this is just to check of LUA_MULTRET works.
         end
     )
 
-    lu.assertEquals(a, one)
-    lu.assertEquals(b, two)
-    lu.assertNil (c)
+    unittest.assert.equals ''(a, one)
+    unittest.assert.equals ''(b, two)
+    unittest.assertNil (c)
 end
 
 function Test_pthread:test_pthread_equal ()
@@ -243,7 +224,7 @@ function Test_pthread:test_pthread_equal ()
 
     libc.pthread.self (function (main_thread)
         local pthread = libc.pthread.checked_create 'pthread_create failed.' (nil, A, main_thread)
-        lambda.o { lu.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
+        lambda.o { unittest.assertFalse, libc.pthread.checked_join 'pthread_join failed.' } (pthread)
     end)
 
 end
@@ -308,7 +289,7 @@ function Test_pthread:test_pthread_sync_missing ()
     local v = libc.pthread.checked_join 'Failed in joining the first worker.' (pthread_a)
     local w = libc.pthread.checked_join 'Failed in joining the second worker.' (pthread_b)
 
-    lu.assertTrue (tot <= N * 2)
+    unittest.assertTrue (tot <= N * 2)
 end
 
 function Test_pthread:test_pthread_sync_mutex ()
@@ -374,7 +355,7 @@ function Test_pthread:test_pthread_sync_mutex ()
     
     local t = D ()
 
-    lu.assertEquals (t, 3 * N)
+    unittest.assert.equals '' (t, 3 * N)
     
 end
 
@@ -467,4 +448,4 @@ end
 
 --------------------------------------------------------------------------------
 
-os.exit( lu.LuaUnit.run() )
+print (unittest.api.suite (tests))
