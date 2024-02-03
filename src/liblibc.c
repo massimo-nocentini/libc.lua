@@ -576,6 +576,20 @@ int l_pthread_join(lua_State *L)
     return n;
 }
 
+int l_pthread_cancel(lua_State *L)
+{
+    luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
+
+    pthread_t *thread = (pthread_t *)lua_touserdata(L, 1);
+
+    int s = pthread_cancel(*thread);
+
+    if (s != 0)
+        luaL_error(L, "pthread_cancel failed: %s.\n", strerror(s));
+
+    return 0;
+}
+
 int l_strtok_r(lua_State *L)
 {
     const char *orig = lua_tostring(L, 1);
@@ -643,6 +657,7 @@ const struct luaL_Reg libc[] = {
     {"fma", l_fma},
     {"pthread_create", l_pthread_create},
     {"pthread_join", l_pthread_join},
+    {"pthread_cancel", l_pthread_cancel},
     {"pthread_attr_init", l_pthread_attr_init},
     {"pthread_attr_destroy", l_pthread_attr_destroy},
     {"pthread_mutexattr_init", l_pthread_mutexattr_init},
