@@ -323,7 +323,6 @@ int l_pthread_attr_destroy(lua_State *L)
     return 1;
 }
 
-
 int l_pthread_mutex_init(lua_State *L)
 {
     int s;
@@ -479,6 +478,42 @@ int l_pthread_cond_destroy(lua_State *L)
     return 1;
 }
 
+void *l_pthread_create_worker(void *arg)
+{
+    lua_State *L = (lua_State *)arg;
+    int code = lua_pcall(L, 0, LUA_MULTRET, 0);
+    lua_pushinteger(L, code);
+    lua_rotate(L, 1, 1); // put the code at the top of the stack.
+    return L;
+}
+
+int l_pthread_create(lua_State *L)
+{
+    luaL_checktype(L, 1, LUA_TFUNCTION);
+
+    lua_State *S = lua_newthread(L);
+
+    lua_rotate(L, 1, 1); // put the function at the bottom of the stack and the thread at the top.
+
+    lua_xmove(L, S, 1); // move the function to the new state.
+
+    pthread_t *thread = (pthread_t *)malloc(sizeof(pthread_t));
+
+    int s = pthread_create(thread, NULL, &l_pthread_create_worker, S);
+
+    lua_pushinteger(L, s);
+
+    lua_createtable(L, 0, 3);
+
+    lua_pushvalue(L, 1);
+    lua_setfield(L, -2, "thread");
+
+    lua_pushlightuserdata(L, thread);
+    lua_setfield(L, -2, "pthread");
+
+    return 2;
+}
+
 int l_strtok_r(lua_State *L)
 {
     const char *orig = lua_tostring(L, 1);
@@ -544,6 +579,7 @@ const struct luaL_Reg libc[] = {
     {"a64l", l_a64l},
     {"lldiv", l_lldiv},
     {"fma", l_fma},
+    {"pthread_create", l_pthread_create},
     {"pthread_attr_init", l_pthread_attr_init},
     {"pthread_attr_destroy", l_pthread_attr_destroy},
     {"pthread_mutexattr_init", l_pthread_mutexattr_init},

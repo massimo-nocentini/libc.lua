@@ -93,5 +93,19 @@ function tests:test_pi ()
     unittest.assert.equals '' (3.14159265358979323846) (libc.math.M_PI)
 end
 
+function tests:test_pthread_create ()
+
+    local called = false
+
+    local flag, thread = libc.pthread.create (function () 
+        called = true
+    end)
+
+    unittest.assert.equals '' 'thread' (type (thread.thread))
+    unittest.assert.equals '' 'userdata' (type (thread.pthread))
+    unittest.assert.equals '' (0) (flag)
+    os.execute ('sleep 0.2s') -- give the thread a chance to run.
+    unittest.assert.istrue '' (called)
+end
 
 print (unittest.api.suite (tests))
