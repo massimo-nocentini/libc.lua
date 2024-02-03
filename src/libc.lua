@@ -4,6 +4,8 @@ local lambda = require 'operator'
 
 local libc = {}
 
+libc.stddef = liblibc.stddef
+
 libc.stdlib = {
 	l64a = liblibc.l64a,
 	a64l = liblibc.a64l,
@@ -31,11 +33,7 @@ string.tokenize = libc.string.strtok_r
 
 libc.pthread = {
 	create = function (attr_tbl) return function (f) return liblibc.pthread_create (attr_tbl, f) end end,
-	join = function (thread, pthread) 
-		if coroutine.status (thread) == 'dead' then 
-			error 'Attempt to join an already joined pthread.'
-		else return liblibc.pthread_join (thread, pthread) end
-	end,
+	join = liblibc.pthread_join,
 	self = liblibc.pthread_self,
 	equal = liblibc.pthread_equal,
 	detach = liblibc.pthread_detach,
