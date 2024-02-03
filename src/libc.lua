@@ -30,7 +30,7 @@ end
 string.tokenize = libc.string.strtok_r
 
 libc.pthread = {
-	create = liblibc.pthread_create,
+	create = function (attr_tbl) return function (f) return liblibc.pthread_create (attr_tbl, f) end end,
 	join = function (thread_tbl) 
 		if coroutine.status (thread_tbl.thread) == 'dead' then 
 			error 'Attempt to join an already joined pthread.'

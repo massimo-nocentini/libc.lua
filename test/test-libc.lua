@@ -97,12 +97,23 @@ function tests:test_pthread_create ()
 
     local witness = {}
 
-    local flag, thread = libc.pthread.create (function () return witness end)
+    local flag, thread = libc.pthread.create {} (function () return witness end)
 
     unittest.assert.equals '' (0, 'thread', 'userdata') (flag, type (thread.thread), type (thread.pthread))
     unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
     unittest.assert.equals '' 'dead' (coroutine.status (thread.thread))
     -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
+end
+
+
+function tests:_test_pthread_create_detached ()
+
+    local witness = {}
+
+    local flag, thread = libc.pthread.create { create_detached = true } (function () while true do end end)
+
+    unittest.assert.equals '' (0, 'thread', 'userdata') (flag, type (thread.thread), type (thread.pthread))
+    
 end
 
 print (unittest.api.suite (tests))

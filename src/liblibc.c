@@ -489,7 +489,22 @@ void *l_pthread_create_worker(void *arg)
 
 int l_pthread_create(lua_State *L)
 {
-    luaL_checktype(L, 1, LUA_TFUNCTION);
+    luaL_checktype(L, 1, LUA_TTABLE);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+
+    pthread_attr_t attr;
+
+    if (pthread_attr_init(&attr) != 0)
+        luaL_error(L, "pthread_attr_init failed.");
+
+    if (lua_getfield(L, 1, "create_detached") == LUA_TBOOLEAN && lua_toboolean(L, -1))
+    {
+        if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
+            luaL_error(L, "pthread_attr_setdetachstate failed.");
+    }
+    lua_pop(L, 1);
+
+    lua_remove(L, 1); // remove the attributes table from the stack.
 
     lua_State *S = lua_newthread(L);
 
@@ -499,7 +514,10 @@ int l_pthread_create(lua_State *L)
 
     pthread_t *thread = (pthread_t *)malloc(sizeof(pthread_t));
 
-    int s = pthread_create(thread, NULL, &l_pthread_create_worker, S);
+    int s = pthread_create(thread, &attr, &l_pthread_create_worker, S);
+
+    if (pthread_attr_destroy(&attr) != 0)
+        luaL_error(L, "pthread_attr_destroy failed.");
 
     lua_pushinteger(L, s);
 
@@ -528,7 +546,8 @@ int l_pthread_join(lua_State *L)
 
     int s = pthread_join(*thread, &ret);
 
-    assert(S == ret);
+    if (S != ret)
+        luaL_error(L, "pthread_join failed: perhaps the thread was detached?");
 
     lua_pushinteger(L, s);
 
