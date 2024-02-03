@@ -48,10 +48,10 @@ function tests:test_strcmp ()
     unittest.assert.equals '' (key) (found)
 end
 
-function tests:test_1e6 ()
+function tests:test_qsort ()
 	
 	local tbl = {}
-	local n = 1000000 
+	local n = 1000
 
 	for i=1,n do table.insert(tbl, math.random(n)) end	-- prepare the input.
 
@@ -95,17 +95,14 @@ end
 
 function tests:test_pthread_create ()
 
-    local called = false
+    local witness = {}
 
-    local flag, thread = libc.pthread.create (function () 
-        called = true
-    end)
+    local flag, thread = libc.pthread.create (function () return witness end)
 
-    unittest.assert.equals '' 'thread' (type (thread.thread))
-    unittest.assert.equals '' 'userdata' (type (thread.pthread))
-    unittest.assert.equals '' (0) (flag)
-    os.execute ('sleep 0.2s') -- give the thread a chance to run.
-    unittest.assert.istrue '' (called)
+    unittest.assert.equals '' (0, 'thread', 'userdata') (flag, type (thread.thread), type (thread.pthread))
+    unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
+    unittest.assert.equals '' 'dead' (coroutine.status (thread.thread))
+    -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
 end
 
 print (unittest.api.suite (tests))

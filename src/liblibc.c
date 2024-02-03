@@ -482,7 +482,7 @@ void *l_pthread_create_worker(void *arg)
 {
     lua_State *L = (lua_State *)arg;
     int code = lua_pcall(L, 0, LUA_MULTRET, 0);
-    lua_pushinteger(L, code);
+    lua_pushboolean(L, code == LUA_OK);
     lua_rotate(L, 1, 1); // put the code at the top of the stack.
     return L;
 }
@@ -512,6 +512,32 @@ int l_pthread_create(lua_State *L)
     lua_setfield(L, -2, "pthread");
 
     return 2;
+}
+
+int l_pthread_join(lua_State *L)
+{
+    lua_getfield(L, 1, "thread");
+    lua_State *S = lua_tothread(L, -1);
+
+    lua_getfield(L, 1, "pthread");
+    pthread_t *thread = (pthread_t *)lua_touserdata(L, -1);
+
+    lua_pop(L, 2); // remove previous clutter.
+
+    void *ret = NULL;
+
+    int s = pthread_join(*thread, &ret);
+
+    assert(S == ret);
+
+    lua_pushinteger(L, s);
+
+    int n = lua_gettop(S);
+    lua_xmove(S, L, n); // move the return value to the main state.
+
+    int code = lua_closethread(S, L);
+
+    return n + 1 + (code == LUA_OK ? 0 : 1);
 }
 
 int l_strtok_r(lua_State *L)
@@ -580,6 +606,7 @@ const struct luaL_Reg libc[] = {
     {"lldiv", l_lldiv},
     {"fma", l_fma},
     {"pthread_create", l_pthread_create},
+    {"pthread_join", l_pthread_join},
     {"pthread_attr_init", l_pthread_attr_init},
     {"pthread_attr_destroy", l_pthread_attr_destroy},
     {"pthread_mutexattr_init", l_pthread_mutexattr_init},
