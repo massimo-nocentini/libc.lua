@@ -281,76 +281,6 @@ void math_constants(lua_State *L)
     lua_setfield(L, -2, "math");
 }
 
-void pthread_cclosure_dbind(lua_State *L, pthread_t **pthread, void **userdata)
-{
-    lua_pushvalue(L, -1);
-    lua_call(L, 0, 2);
-
-    *pthread = (pthread_t *)lua_touserdata(L, -2);
-    *userdata = lua_touserdata(L, -1);
-
-    lua_pop(L, 2);
-}
-
-int l_pthread_created_dbind(lua_State *L)
-{
-    lua_pushvalue(L, lua_upvalueindex(2)); // the pthread.
-    lua_pushvalue(L, lua_upvalueindex(3)); // its userdata.
-
-    return 2;
-}
-
-void *pthread_create_callback(void *arg)
-{
-    item_t *ud = (item_t *)arg;
-
-    lua_State *auxstate = ud->L;
-    int nargs = ud->idx;
-
-    assert(lua_isfunction(auxstate, 1));
-
-    int nres, retcode;
-    retcode = lua_resume(auxstate, NULL, nargs, &nres);
-
-    ud->idx = retcode == LUA_OK ? nres : -1;
-
-    pthread_exit(arg);
-
-    return arg;
-}
-
-int l_pthread_create(lua_State *L)
-{
-    int type;
-
-    int nargs = lua_gettop(L) - 1; // the first argument is the thread's attributes.
-
-    pthread_attr_t *attr = lua_isnil(L, 1) ? NULL : (pthread_attr_t *)lua_touserdata(L, 1);
-
-    lua_State *S = lua_newthread(L); // push a new thread,
-    lua_insert(L, 2);                // and move it to the first position.
-
-    item_t *ud = (item_t *)malloc(sizeof(item_t));
-    ud->L = S;
-    ud->idx = nargs - 1;
-
-    pthread_t *t = (pthread_t *)malloc(sizeof(pthread_t));
-
-    lua_xmove(L, S, nargs); // move everything on the newly created coroutine.
-
-    type = pthread_create(t, attr, &pthread_create_callback, ud);
-
-    lua_pushinteger(L, type); // save the flag on the stack before reusing it.
-    lua_insert(L, 2);         // in particular, move it at the first position.
-
-    lua_pushlightuserdata(L, t);
-    lua_pushlightuserdata(L, ud);
-
-    lua_pushcclosure(L, &l_pthread_created_dbind, 3);
-
-    return 2;
-}
-
 int l_pthread_attr_init(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -393,116 +323,6 @@ int l_pthread_attr_destroy(lua_State *L)
     return 1;
 }
 
-int l_pthread_join(lua_State *L)
-{
-    assert(lua_isfunction(L, -1));
-
-    pthread_t *pthread;
-    void *userdata;
-
-    pthread_cclosure_dbind(L, &pthread, &userdata);
-
-    void *res;
-    int flag = pthread_join(*pthread, &res);
-
-    int nret = 0;
-
-    lua_pushinteger(L, flag);
-    nret++;
-
-    if (res == userdata)
-    {
-        item_t *ud = (item_t *)res;
-        lua_State *auxstate = ud->L;
-
-        int returned = ud->idx;
-
-        free(pthread);
-        free(ud);
-
-        if (returned == -1)
-        {
-            lua_xmove(auxstate, L, 1);
-            nret++;
-
-            lua_error(L);
-        }
-        else
-        {
-            lua_xmove(auxstate, L, returned);
-            nret += returned;
-            int rs = lua_resetthread(auxstate);
-            assert(rs == LUA_OK);
-        }
-    }
-
-    return nret;
-}
-
-int l_pthread_self(lua_State *L)
-{
-    luaL_argcheck(L, lua_isfunction(L, -1), 1, "Expected a function that consumes a pthread.");
-
-    pthread_t pthread = pthread_self();
-
-    lua_pushnil(L);
-    lua_pushlightuserdata(L, &pthread);
-    lua_pushlightuserdata(L, NULL);
-    lua_pushcclosure(L, &l_pthread_created_dbind, 3);
-
-    lua_call(L, 1, LUA_MULTRET);
-
-    return lua_gettop(L);
-}
-
-int l_pthread_equal(lua_State *L)
-{
-
-    pthread_t *pthread_a;
-    void *userdata_a;
-
-    pthread_cclosure_dbind(L, &pthread_a, &userdata_a);
-
-    pthread_t *pthread_b;
-    void *userdata_b;
-
-    lua_pushvalue(L, 1);
-    pthread_cclosure_dbind(L, &pthread_b, &userdata_b);
-
-    int cmp = pthread_equal(*pthread_a, *pthread_b);
-
-    lua_pushboolean(L, cmp != 0 ? 1 : 0);
-
-    return 1;
-}
-
-int l_pthread_detach(lua_State *L)
-{
-    pthread_t *pthread;
-    void *userdata;
-
-    pthread_cclosure_dbind(L, &pthread, &userdata);
-
-    int retcode = pthread_detach(*pthread);
-
-    lua_pushinteger(L, retcode);
-
-    return 1;
-}
-
-int l_pthread_cancel(lua_State *L)
-{
-    pthread_t *pthread;
-    void *userdata;
-
-    pthread_cclosure_dbind(L, &pthread, &userdata);
-
-    int retcode = pthread_cancel(*pthread);
-
-    lua_pushinteger(L, retcode);
-
-    return 1;
-}
 
 int l_pthread_mutex_init(lua_State *L)
 {
@@ -726,12 +546,6 @@ const struct luaL_Reg libc[] = {
     {"fma", l_fma},
     {"pthread_attr_init", l_pthread_attr_init},
     {"pthread_attr_destroy", l_pthread_attr_destroy},
-    {"pthread_create", l_pthread_create},
-    {"pthread_join", l_pthread_join},
-    {"pthread_self", l_pthread_self},
-    {"pthread_equal", l_pthread_equal},
-    {"pthread_detach", l_pthread_detach},
-    {"pthread_cancel", l_pthread_cancel},
     {"pthread_mutexattr_init", l_pthread_mutexattr_init},
     {"pthread_mutexattr_destroy", l_pthread_mutexattr_destroy},
     {"pthread_mutex_init", l_pthread_mutex_init},
