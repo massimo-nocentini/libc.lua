@@ -97,11 +97,11 @@ function tests:test_pthread_create ()
 
     local witness = {}
 
-    local flag, thread = libc.pthread.create {} (function () return witness end)
+    local thread, pthread = libc.pthread.create {} (function () return witness end)
 
-    unittest.assert.equals '' (0, 'thread', 'userdata') (flag, type (thread.thread), type (thread.pthread))
-    unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
-    unittest.assert.equals '' 'dead' (coroutine.status (thread.thread))
+    unittest.assert.equals '' ('thread', 'userdata') (type (thread), type (pthread))
+    unittest.assert.equals '' (true, witness) (libc.pthread.join (thread, pthread))
+    unittest.assert.equals '' 'dead' (coroutine.status (thread))
     -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
 end
 
@@ -114,6 +114,19 @@ function tests:_test_pthread_create_detached ()
 
     unittest.assert.equals '' (0, 'thread', 'userdata') (flag, type (thread.thread), type (thread.pthread))
     
+end
+
+
+function tests:test_pthread_create_error ()
+
+    local witness = 'a simple induced error'
+
+    local thread, pthread = libc.pthread.create {} (function () error (witness, 0) end)
+
+    unittest.assert.equals '' ('thread', 'userdata') (type (thread), type (pthread))
+    unittest.assert.equals '' (false, witness) (libc.pthread.join (thread, pthread))
+    unittest.assert.equals '' 'dead' (coroutine.status (thread))
+    -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
 end
 
 print (unittest.api.suite (tests))

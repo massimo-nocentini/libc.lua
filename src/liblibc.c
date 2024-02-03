@@ -519,44 +519,37 @@ int l_pthread_create(lua_State *L)
     if (pthread_attr_destroy(&attr) != 0)
         luaL_error(L, "pthread_attr_destroy failed.");
 
-    lua_pushinteger(L, s);
+    if (s != 0)
+        luaL_error(L, "pthread_create: %s.\n", strerror(s));
 
-    lua_createtable(L, 0, 3);
-
-    lua_pushvalue(L, 1);
-    lua_setfield(L, -2, "thread");
-
+    // the lua thread is at the top of the stack already.
     lua_pushlightuserdata(L, thread);
-    lua_setfield(L, -2, "pthread");
 
     return 2;
 }
 
 int l_pthread_join(lua_State *L)
 {
-    lua_getfield(L, 1, "thread");
-    lua_State *S = lua_tothread(L, -1);
-
-    lua_getfield(L, 1, "pthread");
-    pthread_t *thread = (pthread_t *)lua_touserdata(L, -1);
-
-    lua_pop(L, 2); // remove previous clutter.
+    lua_State *S = lua_tothread(L, 1);
+    pthread_t *thread = (pthread_t *)lua_touserdata(L, 2);
 
     void *ret = NULL;
 
     int s = pthread_join(*thread, &ret);
 
+    if (s != 0)
+        luaL_error(L, "pthread_join failed: %s.\n", strerror(s));
+
     if (S != ret)
         luaL_error(L, "pthread_join failed: perhaps the thread was detached?");
-
-    lua_pushinteger(L, s);
 
     int n = lua_gettop(S);
     lua_xmove(S, L, n); // move the return value to the main state.
 
-    int code = lua_closethread(S, L);
+    if (lua_closethread(S, L) != LUA_OK)
+        luaL_error(L, "lua_closethread failed: %s.\n", lua_tostring(L, -1));
 
-    return n + 1 + (code == LUA_OK ? 0 : 1);
+    return n;
 }
 
 int l_strtok_r(lua_State *L)
