@@ -492,6 +492,8 @@ int l_pthread_create(lua_State *L)
     luaL_checktype(L, 1, LUA_TTABLE);
     luaL_checktype(L, 2, LUA_TFUNCTION);
 
+    int create_detached = 0;
+
     pthread_attr_t attr;
 
     if (pthread_attr_init(&attr) != 0)
@@ -501,7 +503,10 @@ int l_pthread_create(lua_State *L)
     {
         if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
             luaL_error(L, "pthread_attr_setdetachstate failed.");
+
+        create_detached = 1;
     }
+
     lua_pop(L, 1);
 
     lua_remove(L, 1); // remove the attributes table from the stack.
@@ -530,7 +535,6 @@ int l_pthread_create(lua_State *L)
     lua_pushvalue(L, 1); // push the Lua thread
     lua_setfield(L, -2, "thread");
 
-    // the lua thread is at the top of the stack already.
     lua_pushlightuserdata(L, thread);
     lua_setfield(L, -2, "pthread");
 

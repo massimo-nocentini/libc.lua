@@ -119,4 +119,18 @@ function tests:test_pthread_create_error ()
     -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
 end
 
+
+function tests:test_pthread_create_dispatched ()
+
+    local continue = true
+
+    local pth = libc.pthread.create { create_detached = true } (function () while continue do end end)
+
+    unittest.assert.equals '' ('thread', 'userdata' ) (type (pth.thread), type (pth.pthread))
+
+    continue = false
+
+    os.execute 'sleep 0.2s'
+end
+
 print (unittest.api.suite (tests))
