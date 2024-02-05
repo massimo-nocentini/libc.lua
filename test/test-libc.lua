@@ -101,7 +101,7 @@ function tests:test_pthread_create ()
 
     unittest.assert.equals '' ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
     unittest.assert.equals '' (true, witness) (libc.pthread.join (pth))
-    unittest.assert.equals '' 'dead' (coroutine.status (pth.thread))
+    unittest.assert.equals '' (nil) (pth.thread)
     unittest.assert.equals '' (libc.stddef.NULL) (pth.pthread)
     -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
 end
@@ -114,7 +114,7 @@ function tests:test_pthread_create_error ()
 
     unittest.assert.equals '' ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
     unittest.assert.equals '' (false, witness) (libc.pthread.join (pth))
-    unittest.assert.equals '' 'dead' (coroutine.status (pth.thread))
+    unittest.assert.equals '' (nil) (pth.thread)
     unittest.assert.equals '' (libc.stddef.NULL) (pth.pthread)
     -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
 end
