@@ -550,7 +550,7 @@ int l_pthread_join(lua_State *L)
     if (thread == NULL)
         luaL_error(L, "No thread to join.");
 
-    lua_pop(L, 2);
+    lua_pop(L, 2); // remove the thread and the pthread from the stack.
 
     void *ret;
 
@@ -559,19 +559,22 @@ int l_pthread_join(lua_State *L)
     if (s != 0)
         luaL_error(L, "pthread_join failed: %s.\n", strerror(s));
 
-    if (S != ret)
-        luaL_error(L, "pthread_join failed: perhaps the thread was detached?");
+    lua_pushlightuserdata(L, NULL);
+    lua_setfield(L, 1, "pthread");
 
     free(thread);
 
-    lua_pushlightuserdata(L, NULL);
-    lua_setfield(L, 1, "pthread");
+    if (S != ret)
+        luaL_error(L, "pthread_join failed: perhaps the thread was detached?");
 
     int n = lua_gettop(S);
     lua_xmove(S, L, n); // move the return value to the main state.
 
     if (lua_closethread(S, L) != LUA_OK)
         luaL_error(L, "lua_closethread failed: %s.\n", lua_tostring(L, -1));
+
+    lua_pushnil(L);
+    lua_setfield(L, 1, "thread");
 
     return n;
 }
