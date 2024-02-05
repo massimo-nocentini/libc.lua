@@ -535,9 +535,18 @@ int l_pthread_create(lua_State *L)
     lua_pushvalue(L, 1); // push the Lua thread
     lua_setfield(L, -2, "thread");
 
-    lua_pushlightuserdata(L, thread);
-    lua_setfield(L, -2, "pthread");
-
+    if (create_detached)
+    {
+        free(thread);
+        lua_pushlightuserdata(L, NULL);
+        lua_setfield(L, -2, "pthread");
+    }
+    else
+    {
+        lua_pushlightuserdata(L, thread);
+        lua_setfield(L, -2, "pthread");
+    }
+    
     return 1;
 }
 
