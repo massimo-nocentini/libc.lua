@@ -6,14 +6,23 @@ local lambda = require 'operator'
 local tests = {}
 
 function tests:test_l64a ()
+    unittest.assert.equals '' '' (libc.stdlib.l64a(0))
+    unittest.assert.equals '' '/' (libc.stdlib.l64a(1))
+    unittest.assert.equals '' '0' (libc.stdlib.l64a(2))
+    unittest.assert.equals '' '1' (libc.stdlib.l64a(3))
+    unittest.assert.equals '' '2' (libc.stdlib.l64a(4))
 	unittest.assert.equals '' 'U' (libc.stdlib.l64a(32))
 	unittest.assert.equals '' 'srKP/' (libc.stdlib.l64a(23948792))
-	unittest.assert.equals '' '' (libc.stdlib.l64a(0))
+	
 end
 
 function tests:test_a64l ()
     unittest.assert.equals '' (32) (libc.stdlib.a64l('U'))
     unittest.assert.equals '' (23948792) (libc.stdlib.a64l('srKP/'))
+    unittest.assert.equals '' (1296366029) (libc.stdlib.a64l('BbDFBlh5MUo'))
+    unittest.assert.equals '' (2607348173) (libc.stdlib.a64l('BbDOPio5MVA'))
+    unittest.assert.equals '' (828963277) (libc.stdlib.a64l('BbDOlgL5MVE'))
+    unittest.assert.equals '' (3383513544) (libc.stdlib.a64l('653f71ff43be9f0147c54148'))
 end
 
 function tests:test_a64l_l64a_identity ()
