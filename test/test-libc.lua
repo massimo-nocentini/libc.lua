@@ -139,7 +139,7 @@ function tests:test_pthread_create_dispatched ()
 
     continue = false
 
-    os.execute 'sleep 0.2s'
+    unittest.assert.equals '' (true) (libc.pthread.join (pth))
 end
 
 print (unittest.api.suite (tests))
