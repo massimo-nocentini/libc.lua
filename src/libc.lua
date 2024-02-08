@@ -32,7 +32,7 @@ end
 string.tokenize = libc.string.strtok_r
 
 libc.pthread = {
-	create = function (attr_tbl) return function (f) return liblibc.pthread_create (attr_tbl, f) end end,
+	create = function (f, attr_tbl) return liblibc.pthread_create (f, attr_tbl or {}) end,
 	join = liblibc.pthread_join,
 	self = liblibc.pthread_self,
 	equal = liblibc.pthread_equal,

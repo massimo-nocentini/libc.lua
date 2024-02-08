@@ -101,7 +101,7 @@ function tests:test_pthread_create ()
 
     local witness = {}
 
-    local pth = libc.pthread.create {} (function () return witness end)
+    local pth = libc.pthread.create (function () return witness end)
 
     unittest.assert.equals 'expect a thread and a userdata' 
         ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
@@ -117,7 +117,7 @@ function tests:test_pthread_create_error ()
 
     local witness = 'a simple induced error'
 
-    local pth = libc.pthread.create {} (function () error (witness, 0) end)
+    local pth = libc.pthread.create (function () error (witness, 0) end)
 
     unittest.assert.equals '' ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
     unittest.assert.equals '' (false, witness) (libc.pthread.join (pth))
@@ -128,7 +128,7 @@ function tests:test_pthread_create_dispatched ()
 
     local continue = true
 
-    local pth = libc.pthread.create { create_detached = true } (function () while continue do end end)
+    local pth = libc.pthread.create (function () while continue do end end)
 
     unittest.assert.equals '' ('thread', 'userdata' ) (type (pth.thread), type (pth.pthread))
 

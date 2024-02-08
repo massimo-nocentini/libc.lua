@@ -484,14 +484,14 @@ void *l_pthread_create_worker(void *arg)
     int code = lua_pcall(L, 0, LUA_MULTRET, 0);
     lua_pushboolean(L, code == LUA_OK);
     lua_rotate(L, 1, 1); // put the code at the top of the stack.
-    pthread_exit(L);
+    // pthread_exit(L);
     return L;
 }
 
 int l_pthread_create(lua_State *L)
 {
-    luaL_checktype(L, 1, LUA_TTABLE);
-    luaL_checktype(L, 2, LUA_TFUNCTION);
+    luaL_checktype(L, 1, LUA_TFUNCTION);
+    luaL_checktype(L, 2, LUA_TTABLE);
 
     pthread_attr_t attr;
 
@@ -506,7 +506,7 @@ int l_pthread_create(lua_State *L)
 
     // lua_pop(L, 1);
 
-    lua_remove(L, 1); // remove the attributes table from the stack.
+    lua_remove(L, 2); // remove the attributes table from the stack.
 
     lua_State *S = lua_newthread(L);
 
