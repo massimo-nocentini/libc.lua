@@ -92,14 +92,9 @@ function tests:test_a_b_minus ()
     unittest.assert.equals '' (x * y) (libc.math.fma (x, y, 0.0))
 end
 
-function tests:test_gr ()
-	
+function tests:test_math_constants ()
+	unittest.assert.equals '' (3.14159265358979323846) (libc.math.M_PI)
 	unittest.assert.equals '' (1.618033988749894848204586834365638117720309179805762) (libc.math.M_GR)
-end
-
-function tests:test_pi ()
-	
-    unittest.assert.equals '' (3.14159265358979323846) (libc.math.M_PI)
 end
 
 function tests:test_pthread_create ()
@@ -108,11 +103,14 @@ function tests:test_pthread_create ()
 
     local pth = libc.pthread.create {} (function () return witness end)
 
-    unittest.assert.equals '' ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
-    unittest.assert.equals '' (true, witness) (libc.pthread.join (pth))
-    unittest.assert.equals '' (nil) (pth.thread)
-    unittest.assert.equals '' (libc.stddef.NULL) (pth.pthread)
-    -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
+    unittest.assert.equals 'expect a thread and a userdata' 
+        ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
+    
+    unittest.assert.equals 'expect the witness to be returned' 
+        (true, witness) (libc.pthread.join (pth))
+
+    unittest.assert.equals 'expect the thread to be joined' 
+        (nil, libc.stddef.NULL) (pth.thread, pth.pthread)
 end
 
 function tests:test_pthread_create_error ()
@@ -123,11 +121,8 @@ function tests:test_pthread_create_error ()
 
     unittest.assert.equals '' ('thread', 'userdata') (type (pth.thread), type (pth.pthread))
     unittest.assert.equals '' (false, witness) (libc.pthread.join (pth))
-    unittest.assert.equals '' (nil) (pth.thread)
-    unittest.assert.equals '' (libc.stddef.NULL) (pth.pthread)
-    -- unittest.assert.equals '' (0, true, witness) (libc.pthread.join (thread))
+    unittest.assert.equals '' (nil, libc.stddef.NULL) (pth.thread, pth.pthread)
 end
-
 
 function tests:test_pthread_create_dispatched ()
 

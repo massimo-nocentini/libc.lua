@@ -484,6 +484,7 @@ void *l_pthread_create_worker(void *arg)
     int code = lua_pcall(L, 0, LUA_MULTRET, 0);
     lua_pushboolean(L, code == LUA_OK);
     lua_rotate(L, 1, 1); // put the code at the top of the stack.
+    pthread_exit(L);
     return L;
 }
 
