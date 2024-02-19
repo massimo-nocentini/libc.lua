@@ -692,13 +692,13 @@ int l_base64_decode(lua_State *L)
         input += 4;
 
         // Output the 3 bytes
-        if ((c = (value >> 16) & 0xFF))
+        if ((c = value >> 16) & 0xFF)
             luaL_addchar(&output, c);
 
-        if ((c = (value >> 8) & 0xFF))
+        if ((c = value >> 8) & 0xFF)
             luaL_addchar(&output, c);
 
-        if ((c = value & 0xFF))
+        if ((c = value) & 0xFF)
             luaL_addchar(&output, c);
     }
 
