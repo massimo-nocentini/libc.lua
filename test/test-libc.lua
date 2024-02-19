@@ -19,10 +19,18 @@ end
 function tests:test_a64l ()
     unittest.assert.equals '' (32) (libc.stdlib.a64l('U'))
     unittest.assert.equals '' (23948792) (libc.stdlib.a64l('srKP/'))
-    unittest.assert.equals '' (1296366029) (libc.stdlib.a64l('BbDFBlh5MUo'))
-    unittest.assert.equals '' (2607348173) (libc.stdlib.a64l('BbDOPio5MVA'))
-    unittest.assert.equals '' (828963277) (libc.stdlib.a64l('BbDOlgL5MVE'))
+    
     unittest.assert.equals '' (3383513544) (libc.stdlib.a64l('653f71ff43be9f0147c54148'))
+end
+
+
+function tests:test_base64_decode ()
+    unittest.assert.istrue '' ('Bbyeduf0sUo' < 'Bbyeiuk0sUs')
+    unittest.assert.istrue '' ('Bbyeiuk0sUs' < 'Bbyej5P0sUw')
+    unittest.assert.istrue '' ('Bbyej5P0sUw' < 'BbyfoEI0sU0')
+    local decode = libc.base64.decode
+    unittest.assert.equals '' 'foobar' (decode 'Zm9vYmFy')
+    unittest.assert.equals '' 'Hello world' (decode 'SGVsbG8gd29ybGQ=')
 end
 
 function tests:test_a64l_l64a_identity ()

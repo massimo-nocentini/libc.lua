@@ -4,6 +4,10 @@ local lambda = require 'operator'
 
 local libc = {}
 
+libc.base64 = {
+	decode = liblibc.base64_decode
+}
+
 libc.stddef = liblibc.stddef
 
 libc.stdlib = {

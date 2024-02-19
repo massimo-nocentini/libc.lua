@@ -653,6 +653,60 @@ int l_strtok_r(lua_State *L)
     return 1;
 }
 
+// Decode a Base64 character
+int base64_decode_char(char c)
+{
+    if (c >= 'A' && c <= 'Z')
+        return c - 'A';
+    if (c >= 'a' && c <= 'z')
+        return c - 'a' + 26;
+    if (c >= '0' && c <= '9')
+        return c - '0' + 52;
+    if (c == '+')
+        return 62;
+    if (c == '/')
+        return 63;
+    if (c == '=')
+        return 0;
+    return -1; // Invalid character
+}
+
+// Decode a Base64 string
+int l_base64_decode(lua_State *L)
+{
+    const char *input = lua_tostring(L, 1);
+
+    luaL_Buffer output;
+
+    luaL_buffinit(L, &output);
+
+    char c;
+
+    while (*input)
+    {
+        // Decode each group of 4 characters into 3 bytes
+        int value = base64_decode_char(input[0]) << 18;
+        value += base64_decode_char(input[1]) << 12;
+        value += base64_decode_char(input[2]) << 6;
+        value += base64_decode_char(input[3]);
+        input += 4;
+
+        // Output the 3 bytes
+        if ((c = (value >> 16) & 0xFF))
+            luaL_addchar(&output, c);
+
+        if ((c = (value >> 8) & 0xFF))
+            luaL_addchar(&output, c);
+
+        if ((c = value & 0xFF))
+            luaL_addchar(&output, c);
+    }
+
+    luaL_pushresult(&output);
+
+    return 1;
+}
+
 const struct luaL_Reg libc[] = {
     {"qsort", l_qsort},
     {"bsearch", l_bsearch},
@@ -678,6 +732,7 @@ const struct luaL_Reg libc[] = {
     {"pthread_cond_signal", l_pthread_cond_signal},
     {"pthread_cond_broadcast", l_pthread_cond_broadcast},
     {"pthread_cond_wait", l_pthread_cond_wait},
+    {"base64_decode", l_base64_decode},
     {NULL, NULL} /* sentinel */
 };
 
