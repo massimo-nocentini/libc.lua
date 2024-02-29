@@ -325,28 +325,25 @@ int l_pthread_attr_destroy(lua_State *L)
 
 int l_pthread_mutex_init(lua_State *L)
 {
-    int s;
 
-    pthread_mutexattr_t *attr = lua_islightuserdata(L, 1) ? (pthread_mutexattr_t *)lua_touserdata(L, 1) : NULL;
-    pthread_mutex_t *mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+    // pthread_mutexattr_t *attr = lua_islightuserdata(L, 1) ? (pthread_mutexattr_t *)lua_touserdata(L, 1) : NULL;
 
-    s = pthread_mutex_init(mutex, attr);
+    pthread_mutex_t *mutex = (pthread_mutex_t *)lua_newuserdatauv(L, sizeof(pthread_mutex_t), 0);
 
-    lua_pushinteger(L, s);
-    lua_pushlightuserdata(L, mutex);
+    int s = pthread_mutex_init(mutex, NULL);
 
-    return 2;
+    if (s != 0)
+        luaL_error(L, "pthread_mutex_init failed.");
+
+    return 1;
 }
 
 int l_pthread_mutex_destroy(lua_State *L)
 {
-    int type;
 
     pthread_mutex_t *attr = (pthread_mutex_t *)lua_touserdata(L, 1);
 
-    type = pthread_mutex_destroy(attr);
-
-    free(attr);
+    int type = pthread_mutex_destroy(attr);
 
     lua_pushinteger(L, type);
 
@@ -396,7 +393,7 @@ int l_pthread_mutexattr_destroy(lua_State *L)
 int l_pthread_mutex_lock(lua_State *L)
 {
 
-    pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, -1);
+    pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, 1);
 
     int retcode = pthread_mutex_lock(s);
 
@@ -408,7 +405,7 @@ int l_pthread_mutex_lock(lua_State *L)
 int l_pthread_mutex_unlock(lua_State *L)
 {
 
-    pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, -1);
+    pthread_mutex_t *s = (pthread_mutex_t *)lua_touserdata(L, 1);
 
     int retcode = pthread_mutex_unlock(s);
 
@@ -481,11 +478,15 @@ int l_pthread_cond_destroy(lua_State *L)
 void *pthread_create_worker(void *arg)
 {
     lua_State *L = (lua_State *)arg;
-    int code = lua_pcall(L, 0, LUA_MULTRET, 0);
+    int nres;
+    int code = lua_resume(L, NULL, 0, &nres);
+    // int code = lua_pcall(L, 0, LUA_MULTRET, 0);
     lua_pushboolean(L, code == LUA_OK);
     lua_insert(L, 1);
-    pthread_exit(L);
-    return L;
+    if (lua_toboolean(L, 1) == 0)
+        lua_pop(L, 1);
+
+    return arg;
 }
 
 int l_pthread_create(lua_State *L)
@@ -516,7 +517,7 @@ int l_pthread_create(lua_State *L)
 
     pthread_t *thread = (pthread_t *)lua_newuserdatauv(L, sizeof(pthread_t), 1);
 
-    int s = pthread_create(thread, &attr, &pthread_create_worker, S);
+    int s = pthread_create(thread, &attr, pthread_create_worker, S);
 
     if (pthread_attr_destroy(&attr) != 0)
     {
